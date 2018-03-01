@@ -12,6 +12,24 @@
 #include "BAP_define.h"
 #include "BAP_UART.h"
 
+SemaphoreHandle_t InterDEBUGUART_Send_Se;
+SemaphoreHandle_t InterDEBUGUART_Recv_Se;
+SemaphoreHandle_t InterCMDUART_Send_Se;
+SemaphoreHandle_t InterCMDUART_Recv_Se;
+
+BAP_RESULT_E BAP_UART_InterSemaphoreInit(void)
+{
+    BAP_SemCreateBin(InterDEBUGUART_Send_Se);
+    BAP_SemCreateBin(InterDEBUGUART_Recv_Se);
+    BAP_SemCreateBin(InterCMDUART_Send_Se);
+    BAP_SemCreateBin(InterCMDUART_Recv_Se);
+    BAP_SemGive(InterDEBUGUART_Send_Se);
+    BAP_SemGive(InterDEBUGUART_Recv_Se);
+    BAP_SemGive(InterCMDUART_Send_Se);
+    BAP_SemGive(InterCMDUART_Recv_Se);
+    return BAP_SUCCESS;
+}
+
 BAP_RESULT_E BAP_UART_SendString(uint32_t uart, char* str, int strlen)
 {
     if (str == NULL)
@@ -23,10 +41,16 @@ BAP_RESULT_E BAP_UART_SendString(uint32_t uart, char* str, int strlen)
     if ((uart != USART1) && (uart != USART2) && (uart != USART3) && (uart != UART4) && (uart != UART5))
         return BAP_FAILED_WRONG_PAR;
 
+    if (uart == BAP_UART_CMD_CH_D) BAP_SemTakeMax(InterCMDUART_Send_Se);
+    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemTakeMax(InterDEBUGUART_Send_Se);
+
     for (int i = 0; i < strlen; i++)
     {
         usart_send_blocking(uart, str[i]);
     }
+
+    if (uart == BAP_UART_CMD_CH_D) BAP_SemGive(InterCMDUART_Send_Se);
+    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemGive(InterDEBUGUART_Send_Se);
 
     return BAP_SUCCESS;
 }
@@ -41,12 +65,18 @@ BAP_RESULT_E BAP_UART_RecvString(uint32_t uart, char* str, int strlen)
     
     int count = 0;
 
+    if (uart == BAP_UART_CMD_CH_D) BAP_SemTakeMax(InterCMDUART_Recv_Se);
+    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemTakeMax(InterDEBUGUART_Recv_Se);
+
     for (int i=0; i<strlen; i++)
     {
         str[count] = usart_recv_blocking(uart);
         count++;
     }
-    
+
+    if (uart == BAP_UART_CMD_CH_D) BAP_SemGive(InterCMDUART_Recv_Se);
+    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemGive(InterDEBUGUART_Recv_Se);
+
     return BAP_SUCCESS;
 }
 

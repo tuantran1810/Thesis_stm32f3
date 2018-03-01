@@ -2,7 +2,8 @@
 #define BAP_TASK_H
 #include "BAP_define.h"
 
-void USART2RecvCmdTask_Handler(void* p);
-void USART2SendTask_Handler(void* p);
+void BAP_TaskInterSemaphoreInit(void);
+void BAP_TaskRecvCmd(void* p);
+void BAP_TaskMotorControl(void* p);
 
 #endif

@@ -35,15 +35,31 @@ char CMDUART_Recv_Buffer[BAP_MAX_UART_MESSAGE_LENGTH_D] = {0};
 SemaphoreHandle_t CMDUART_RecvStartMess_Se;
 char CMDUART_RecvStartMess_Buffer[BAP_UART_STARTMESSAGE_LENGTH_D] = {0};
 
+TaskSharedVars_s SharedVars;
+
 int main(void)
 {
-    BAPClockSetup();
-    BAPGPIOSetup();
-    BAPUSARTWithDMASetup(USART2, 115200, 1);
-    BAPUSARTWithDMASetup(UART5, 115200, 0);
-    BAPSemaphoreInit();
-    BAPPWMSetup(TIM1, 64, 1000, TIM_OC1);
-    xTaskCreate(USART2RecvCmdTask_Handler, "USART2 Recv Command Handler", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    BAP_SetupClock();
+    BAP_SetupGPIO();
+
+    BAP_SetupUSARTWithDMA(USART2, BAP_UART_BAUDRATE_D, 1);
+    BAP_SetupUSARTWithDMA(UART5, BAP_UART_BAUDRATE_D, 0);
+
+    BAP_SetupPWM(TIM1, BAP_SYSTEM_CLOCK_HZ_D/1000000, 1000);	//config Timer1 PWM to run at 1kHz
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_FORWARD_OUT_D);
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_BACKWARD_OUT_D);
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_FORWARD_OUT_D);
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_BACKWARD_OUT_D);
+
+    SharedVars.PWM = 0;
+    SharedVars.flag = 0;
+
+    BAP_SetupSemaphoreInit();
+    BAP_UART_InterSemaphoreInit();
+    BAP_TaskInterSemaphoreInit();
+
+    xTaskCreate(BAP_TaskRecvCmd, "USART2 Recv Command Handler", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
+    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
     vTaskStartScheduler();
 
     while(1);

@@ -14,15 +14,25 @@
 #include "BAP_task.h"
 #include "BAP_define.h"
 #include "BAP_UART.h"
+#include "BAP_setup.h"
 
-void USART2RecvCmdTask_Handler(void* p)
+SemaphoreHandle_t InterSharedVars_Se;
+
+void BAP_TaskInterSemaphoreInit(void)
 {
+    BAP_SemCreateBin(InterSharedVars_Se);
+    BAP_SemGive(InterSharedVars_Se);
+}
+
+void BAP_TaskRecvCmd(void* p)
+{
+    TaskSharedVars_s* pSharedVars = (TaskSharedVars_s*)p;
     while(1)
     {
         if(BAP_SemTakeMax(CMDUART_RecvStartMess_Se) == pdPASS)
         {
-            BAP_UART_SendString(UART_CMD_CH_D, BAP_STARTNEWTURN_STR_D, strlen(BAP_STARTNEWTURN_STR_D));
-            BAP_UARTRecvDMA(UART_CMD_CH_D, CMDUART_RecvStartMess_Buffer, BAP_UART_STARTMESSAGE_LENGTH_D);
+            BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_STARTNEWTURN_STR_D, strlen(BAP_STARTNEWTURN_STR_D));
+            BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_RecvStartMess_Buffer, BAP_UART_STARTMESSAGE_LENGTH_D);
 
             if(BAP_SemTake(CMDUART_Recv_Se, portMAX_DELAY) == pdPASS)
             {
@@ -31,11 +41,11 @@ void USART2RecvCmdTask_Handler(void* p)
                     int length = 0;
                     length = atoi(&CMDUART_RecvStartMess_Buffer[BAP_UART_STARTMESSAGE_STR_LENGTH_D]);
 
-                    BAP_UART_SendString(UART_CMD_CH_D, BAP_RECVOK_STR_D, strlen(BAP_RECVOK_STR_D));
-                    BAP_UARTRecvDMA(UART_CMD_CH_D, CMDUART_Recv_Buffer, (int)length);
+                    BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVOK_STR_D, strlen(BAP_RECVOK_STR_D));
+                    BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_Recv_Buffer, (int)length);
                     if(BAP_SemTake(CMDUART_Recv_Se, portMAX_DELAY) == pdPASS)
                     {
-                        BAP_UART_SendString(UART_CMD_CH_D, BAP_RECVOK_STR_D, strlen(BAP_RECVOK_STR_D));
+                        BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVOK_STR_D, strlen(BAP_RECVOK_STR_D));
 
                         if(memcmp(CMDUART_Recv_Buffer, BAP_CMDMESS_STR_D, strlen(BAP_CMDMESS_STR_D)) == 0)
                         {
@@ -49,7 +59,11 @@ void USART2RecvCmdTask_Handler(void* p)
                                 BAP_LOG_DEBUG("BAP_CTRL_STR_D");
                                 BAP_LOG_DEBUG(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)]);
                                 int tmp = atoi(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D) + strlen(BAP_CTRL_STR_D)]);
-                                timer_set_oc_value(TIM1, TIM_OC1, tmp);
+                                BAP_SemTakeMax(InterSharedVars_Se);
+                                pSharedVars->PWM = tmp;
+                                pSharedVars->flag = 1;
+                                BAP_SemGive(InterSharedVars_Se);
+
                             }
                             else if(memcmp(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)], BAP_SETPOINT_STR_D, strlen(BAP_SETPOINT_STR_D)) == 0)
                             {
@@ -58,22 +72,23 @@ void USART2RecvCmdTask_Handler(void* p)
                             }
                             else
                             {
+                                //TODO
                             }
                         }
                     }
                     else
                     {
-                        BAP_UART_SendString(UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
+                        BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
                     }
                 }
                 else
                 {
-                    BAP_UART_SendString(UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
+                    BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
                 }
             }
             else
             {
-                BAP_UART_SendString(UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
+                BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
             }
             BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer);
             BAP_CLEAN_BUFFER(CMDUART_RecvStartMess_Buffer);
@@ -82,13 +97,18 @@ void USART2RecvCmdTask_Handler(void* p)
     }
 }
 
-void USART2SendTask_Handler(void* p)
+void BAP_TaskMotorControl(void* p)
 {
+    TaskSharedVars_s* pSharedVars = (TaskSharedVars_s*)p;
     while(1)
     {
-        gpio_toggle(GPIOE, GPIO10);
-        for (int i=0; i<600000; i++);
-        if(xSemaphoreGive(CMDUART_Recv_Se) == pdPASS)
-            BAP_LOG_DEBUG("give sem \n\r");
+        BAP_SemTakeMax(InterSharedVars_Se);
+        if(pSharedVars->flag)
+        {
+            BAP_LOG_DEBUG("OK\n\r");
+            pSharedVars->flag = 0;
+            BAP_SetupPWMChangePeriod(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_FORWARD_OUT_D, pSharedVars->PWM);
+        }
+        BAP_SemGive(InterSharedVars_Se);
     }
 }

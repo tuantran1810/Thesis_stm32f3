@@ -13,7 +13,8 @@
 #include "BAP_setup.h"
 #include "BAP_define.h"
 
-void BAPClockSetup(void)
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void BAP_SetupClock(void)
 {
     rcc_clock_setup_hsi(&rcc_hsi_8mhz[RCC_CLOCK_64MHZ]);
     rcc_periph_clock_enable(RCC_GPIOE); // for PWM
@@ -27,7 +28,8 @@ void BAPClockSetup(void)
     rcc_periph_clock_enable(RCC_TIM1);
 }
 
-void BAPGPIOSetup(void)
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void BAP_SetupGPIO(void)
 {
     //GPIO for USART2
     gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO2 | GPIO3); //PA2 = USART2_TX  PA3 = USART2_RX
@@ -44,8 +46,13 @@ void BAPGPIOSetup(void)
     gpio_set_af(GPIOE, GPIO_AF2, GPIO9 | GPIO11 | GPIO13 | GPIO14);
 }
 
-BAP_RESULT_E BAPPWMTimerSetup(uint32_t tim, uint32_t prescaler, uint32_t period)
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//Run BAP_SetupPWM() first, then run BAP_SetupPWMOutputEnable() to enable output pins
+//Use BAP_SetupPWMChangePeriod() to change PWM period after running two functions above
+BAP_RESULT_E BAP_SetupPWMTimer(uint32_t tim, uint32_t prescaler, uint32_t period)
 {
+    // tim should be TIM1 - TIM17
+    // prescaler should be uint16_t
     timer_reset(tim);
     timer_set_mode(tim, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
     timer_set_prescaler(tim, prescaler);
@@ -57,7 +64,7 @@ BAP_RESULT_E BAPPWMTimerSetup(uint32_t tim, uint32_t prescaler, uint32_t period)
     return BAP_SUCCESS;
 }
 
-BAP_RESULT_E BAPPWMOutputSetup(uint32_t tim)
+BAP_RESULT_E BAP_SetupPWMOutput(uint32_t tim)
 {
     for (int i = 0; i < 7; i++)
     {
@@ -68,17 +75,29 @@ BAP_RESULT_E BAPPWMOutputSetup(uint32_t tim)
     return BAP_SUCCESS;
 }
 
-BAP_RESULT_E BAPPWMSetup(uint32_t tim, uint32_t prescaler, uint32_t period, enum tim_oc_id oc_id)
+BAP_RESULT_E BAP_SetupPWM(uint32_t tim, uint32_t prescaler, uint32_t period)
 {
-    BAPPWMTimerSetup(tim, prescaler, period);
-    BAPPWMOutputSetup(tim);
+    BAP_SetupPWMTimer(tim, prescaler, period);
+    BAP_SetupPWMOutput(tim);
     timer_enable_counter(tim);
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SetupPWMOutputEnable(uint32_t tim, enum tim_oc_id oc_id)
+{
     timer_set_oc_value(tim, oc_id, 0);
     timer_enable_oc_output(tim, oc_id);
     return BAP_SUCCESS;
 }
 
-BAP_RESULT_E BAPUSARTWithDMASetup(uint32_t uart, int baudrate,bool withDMA)
+BAP_RESULT_E BAP_SetupPWMChangePeriod(uint32_t tim, enum tim_oc_id oc_id, int period)
+{
+    timer_set_oc_value(tim, oc_id, period);
+    return BAP_SUCCESS;
+}
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+BAP_RESULT_E BAP_SetupUSARTWithDMA(uint32_t uart, int baudrate,bool withDMA)
 {
     if ((uart != USART1) && (uart != USART2) && (uart != USART3) && (uart != UART4) && (uart != UART5))
         return BAP_FAILED_WRONG_PAR;
@@ -126,11 +145,12 @@ BAP_RESULT_E BAPUSARTWithDMASetup(uint32_t uart, int baudrate,bool withDMA)
     return BAP_SUCCESS;
 }
 
-void BAPSemaphoreInit(void)
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void BAP_SetupSemaphoreInit(void)
 {
-    CMDUART_Send_Se = xSemaphoreCreateBinary();
-    CMDUART_Recv_Se = xSemaphoreCreateBinary();
-    CMDUART_RecvStartMess_Se = xSemaphoreCreateBinary();
+    BAP_SemCreateBin(CMDUART_Send_Se);
+    BAP_SemCreateBin(CMDUART_Recv_Se);
+    BAP_SemCreateBin(CMDUART_RecvStartMess_Se);
 
     BAP_SemGive(CMDUART_RecvStartMess_Se);
 }
