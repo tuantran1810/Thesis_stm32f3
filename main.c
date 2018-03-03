@@ -51,6 +51,8 @@ int main(void)
     BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_FORWARD_OUT_D);
     BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_BACKWARD_OUT_D);
 
+    BAP_SetupEncoder(TIM4);
+
     SharedVars.PWM = 0;
     SharedVars.flag = 0;
 

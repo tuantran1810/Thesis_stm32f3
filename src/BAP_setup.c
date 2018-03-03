@@ -13,19 +13,26 @@
 #include "BAP_setup.h"
 #include "BAP_define.h"
 
+BAP_RESULT_E BAP_SetupPWMTimer(uint32_t tim, uint32_t prescaler, uint32_t period);
+BAP_RESULT_E BAP_SetupPWMOutput(uint32_t tim);
+BAP_RESULT_E BAP_SetupEncoderInput(uint32_t tim);
+BAP_RESULT_E BAP_SetupEncoderTimer(uint32_t tim);
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void BAP_SetupClock(void)
 {
     rcc_clock_setup_hsi(&rcc_hsi_8mhz[RCC_CLOCK_64MHZ]);
     rcc_periph_clock_enable(RCC_GPIOE); // for PWM
     rcc_periph_clock_enable(RCC_GPIOA); // for USART2
-    rcc_periph_clock_enable(RCC_GPIOC); // for UART5
+    rcc_periph_clock_enable(RCC_GPIOC); // for UART5, TIM8 Encoder input
     rcc_periph_clock_enable(RCC_GPIOD); // for UART5
 
     rcc_periph_clock_enable(RCC_USART2);
     rcc_periph_clock_enable(RCC_UART5);
     rcc_periph_clock_enable(RCC_DMA1);
     rcc_periph_clock_enable(RCC_TIM1);
+    rcc_periph_clock_enable(RCC_TIM8);
+    rcc_periph_clock_enable(RCC_TIM4);
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -44,8 +51,53 @@ void BAP_SetupGPIO(void)
     //GPIO for PWM => use timer 1 | PE9 = TIM1_CH1 | PE11 = TIM1_CH2 | PE13 = TIM1_CH3 | PE14 = TIM1_CH4
     gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO13 | GPIO14);
     gpio_set_af(GPIOE, GPIO_AF2, GPIO9 | GPIO11 | GPIO13 | GPIO14);
+
+    //GPIO for TIM4 Encoder input PD12 = TIM4_CH1 | PD13 = TIM4_CH2
+    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO12 | GPIO13);
+    gpio_set_af(GPIOD, GPIO_AF2, GPIO12 | GPIO13);
+
+    //GPIO for TIM8 Encoder input PC6 = TIM8_CH1 | PC7 = TIM8_CH2
+    gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+    gpio_set_af(GPIOC, GPIO_AF4, GPIO6 | GPIO7);
 }
 
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+BAP_RESULT_E BAP_SetupEncoderTimer(uint32_t tim)
+{
+    timer_reset(tim);
+    timer_set_mode(tim, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+    timer_set_prescaler(tim, 0);
+    timer_set_repetition_counter(tim, 0);
+    timer_set_counter(tim, 0);
+    timer_enable_preload(tim);
+    timer_continuous_mode(tim);
+    timer_set_period(tim, 0xFFFF);
+    timer_enable_break_main_output(tim);
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SetupEncoderInput(uint32_t tim)
+{
+    timer_slave_set_mode(tim, TIM_SMCR_SMS_EM3);
+    timer_ic_set_input(tim, TIM_IC1, TIM_IC_IN_TI1);
+    timer_ic_set_input(tim, TIM_IC2, TIM_IC_IN_TI2);
+    timer_set_oc_polarity_high(tim, TIM_OC1);
+    timer_set_oc_polarity_high(tim, TIM_OC2);
+    timer_enable_counter(tim);
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SetupEncoder(uint32_t tim)
+{
+    BAP_SetupEncoderTimer(tim);
+    BAP_SetupEncoderInput(tim);
+    return BAP_SUCCESS;
+}
+
+uint32_t BAP_SetupReadEncoder(uint32_t tim)
+{
+    return timer_get_counter(tim);
+}
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //Run BAP_SetupPWM() first, then run BAP_SetupPWMOutputEnable() to enable output pins
 //Use BAP_SetupPWMChangePeriod() to change PWM period after running two functions above
@@ -59,14 +111,15 @@ BAP_RESULT_E BAP_SetupPWMTimer(uint32_t tim, uint32_t prescaler, uint32_t period
     timer_set_repetition_counter(tim, 0);
     timer_enable_preload(tim);
     timer_continuous_mode(tim);
-    timer_set_period(tim, period);
+    timer_set_period(tim, period-1);
     timer_enable_break_main_output(tim);
     return BAP_SUCCESS;
 }
 
 BAP_RESULT_E BAP_SetupPWMOutput(uint32_t tim)
 {
-    for (int i = 0; i < 7; i++)
+    const int NumOfOutput = 7;
+    for (int i = 0; i < NumOfOutput; i++)
     {
         timer_disable_oc_output(tim, i);
         timer_set_oc_mode(tim, i, TIM_OCM_PWM1);
