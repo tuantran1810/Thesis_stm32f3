@@ -18,6 +18,6 @@ typedef struct PID_Controller{
     float ek_2;
 }PID_Controller;
 
-bool PID_Update(struct PID_Controller* PID, float KP, float KI, float KD, float dT,float setpoint);
-bool PID_Init(struct PID_Controller* PID, float KP, float KI, float KD, float dT,float setpoint);
-float PID_Get_Output(struct PID_Controller* PID, float input);
+bool PID_Update(PID_Controller* PID, float KP, float KI, float KD, float dT,float setpoint);
+bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT,float setpoint);
+float PID_Get_Output(PID_Controller* PID, float input);

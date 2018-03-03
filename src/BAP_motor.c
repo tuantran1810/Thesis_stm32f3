@@ -36,8 +36,8 @@ BAP_RESULT_E BAP_MotorChangePWMPeriod(uint32_t tim, enum tim_oc_id oc_id, int pe
 
 uint32_t BAP_MotorGetPos(BAP_MOTOR_E motor)
 {
-    static uint32_t Motor1_Pos = 0x80000000;
-    static uint32_t Motor2_Pos = 0x80000000;
+    static uint32_t Motor1_Pos = BAP_MOTOR_START_POS_D;
+    static uint32_t Motor2_Pos = BAP_MOTOR_START_POS_D;
     static uint32_t Motor1_prepos16 = 0;
     static uint32_t Motor2_prepos16 = 0;
 

@@ -1,8 +1,8 @@
 #include "pid_controller.h"
 
-bool PID_Update_Param(struct PID_Controller* PID);
+bool PID_Update_Param(PID_Controller* PID);
 
-bool PID_Update_Param(struct PID_Controller* PID){
+bool PID_Update_Param(PID_Controller* PID){
     if ((PID->KP == 0)&&(PID->KI == 0)&&(PID->KD == 0)) return 0;
     if (PID->dT == 0) return 0;
     PID->a = (PID->KP) + (PID->KI*PID->dT/2) + (PID->KD/PID->dT);
@@ -11,7 +11,7 @@ bool PID_Update_Param(struct PID_Controller* PID){
     return 1;
 }
 
-bool PID_Update(struct PID_Controller* PID, float KP, float KI, float KD, float dT, float setpoint){
+bool PID_Update(PID_Controller* PID, float KP, float KI, float KD, float dT, float setpoint){
     PID->KP = KP;
     PID->KD = KD;
     PID->KI = KI;
@@ -20,7 +20,7 @@ bool PID_Update(struct PID_Controller* PID, float KP, float KI, float KD, float 
     return PID_Update_Param(PID);
 }
 
-bool PID_Init(struct PID_Controller* PID, float KP, float KI, float KD, float dT, float setpoint){
+bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT, float setpoint){
     PID->KP = KP;
     PID->KD = KD;
     PID->KI = KI;
@@ -32,7 +32,7 @@ bool PID_Init(struct PID_Controller* PID, float KP, float KI, float KD, float dT
     return PID_Update_Param(PID);
 }
 
-float PID_Get_Output(struct PID_Controller* PID, float respond){
+float PID_Get_Output(PID_Controller* PID, float respond){
     float ek = PID->setpoint - respond;
     float uk = PID->uk_1 + PID->a*ek +PID->b*PID->ek_1 + PID->c*PID->ek_2;
     PID->uk_1 = uk;
