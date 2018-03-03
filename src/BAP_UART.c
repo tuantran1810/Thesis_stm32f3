@@ -17,7 +17,7 @@ SemaphoreHandle_t InterDEBUGUART_Recv_Se;
 SemaphoreHandle_t InterCMDUART_Send_Se;
 SemaphoreHandle_t InterCMDUART_Recv_Se;
 
-BAP_RESULT_E BAP_UART_InterSemaphoreInit(void)
+BAP_RESULT_E BAP_UARTModuleInit(void)
 {
     BAP_SemCreateBin(InterDEBUGUART_Send_Se);
     BAP_SemCreateBin(InterDEBUGUART_Recv_Se);

@@ -94,13 +94,9 @@ BAP_RESULT_E BAP_SetupEncoder(uint32_t tim)
     return BAP_SUCCESS;
 }
 
-uint32_t BAP_SetupReadEncoder(uint32_t tim)
-{
-    return timer_get_counter(tim);
-}
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //Run BAP_SetupPWM() first, then run BAP_SetupPWMOutputEnable() to enable output pins
-//Use BAP_SetupPWMChangePeriod() to change PWM period after running two functions above
+//Use BAP_MotorChangePWMPeriod() to change PWM period after running two functions above
 BAP_RESULT_E BAP_SetupPWMTimer(uint32_t tim, uint32_t prescaler, uint32_t period)
 {
     // tim should be TIM1 - TIM17
@@ -143,12 +139,6 @@ BAP_RESULT_E BAP_SetupPWMOutputEnable(uint32_t tim, enum tim_oc_id oc_id)
     return BAP_SUCCESS;
 }
 
-BAP_RESULT_E BAP_SetupPWMChangePeriod(uint32_t tim, enum tim_oc_id oc_id, int period)
-{
-    timer_set_oc_value(tim, oc_id, period);
-    return BAP_SUCCESS;
-}
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 BAP_RESULT_E BAP_SetupUSARTWithDMA(uint32_t uart, int baudrate,bool withDMA)
 {
@@ -158,14 +148,14 @@ BAP_RESULT_E BAP_SetupUSARTWithDMA(uint32_t uart, int baudrate,bool withDMA)
     if ((uart == UART5) && withDMA)
         return BAP_FAILED_WRONG_PAR;
 
-	usart_set_baudrate(uart, baudrate);
-	usart_set_databits(uart, 8);
-	usart_set_stopbits(uart, USART_STOPBITS_1);
-	usart_set_mode(uart, USART_MODE_TX_RX);
-	usart_set_parity(uart, USART_PARITY_NONE);
-	usart_set_flow_control(uart, USART_FLOWCONTROL_NONE);
+    usart_set_baudrate(uart, baudrate);
+    usart_set_databits(uart, 8);
+    usart_set_stopbits(uart, USART_STOPBITS_1);
+    usart_set_mode(uart, USART_MODE_TX_RX);
+    usart_set_parity(uart, USART_PARITY_NONE);
+    usart_set_flow_control(uart, USART_FLOWCONTROL_NONE);
 
-	usart_enable(uart);
+    usart_enable(uart);
 
     uint8_t DMARxCH = 0, DMATxCH = 0;
     if (withDMA)
@@ -199,7 +189,7 @@ BAP_RESULT_E BAP_SetupUSARTWithDMA(uint32_t uart, int baudrate,bool withDMA)
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-void BAP_SetupSemaphoreInit(void)
+void BAP_SetupModuleInit(void)
 {
     BAP_SemCreateBin(CMDUART_Send_Se);
     BAP_SemCreateBin(CMDUART_Recv_Se);

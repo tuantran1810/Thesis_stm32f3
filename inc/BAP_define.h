@@ -33,11 +33,14 @@
 #define BAP_UART_CMD_CH_D                       USART2
 #define BAP_UART_DEBUG_CH_D                     USART2
 
-#define BAP_PWM_TIMER_D                             TIM1
-#define BAP_PWM_MOTOR1_FORWARD_OUT_D                TIM_OC1
-#define BAP_PWM_MOTOR1_BACKWARD_OUT_D               TIM_OC2
-#define BAP_PWM_MOTOR2_FORWARD_OUT_D                TIM_OC3
-#define BAP_PWM_MOTOR2_BACKWARD_OUT_D               TIM_OC4
+#define BAP_PWM_TIMER_D                         TIM1
+#define BAP_PWM_MOTOR1_FORWARD_OUT_D            TIM_OC1
+#define BAP_PWM_MOTOR1_BACKWARD_OUT_D           TIM_OC2
+#define BAP_PWM_MOTOR2_FORWARD_OUT_D            TIM_OC3
+#define BAP_PWM_MOTOR2_BACKWARD_OUT_D           TIM_OC4
+
+#define BAP_MOTOR1_ENCODER_TIMER_D              TIM4
+#define BAP_MOTOR2_ENCODER_TIMER_D              TIM8
 
 //Macro functions
 #define BAP_LOG_DEBUG(MESS)                     BAP_UART_SendString(BAP_UART_DEBUG_CH_D, MESS, strlen(MESS))
@@ -55,6 +58,12 @@ typedef enum
     BAP_FAILED_WRONG_PAR,
     BAP_FAILED_TIMEOUT
 }BAP_RESULT_E;
+
+typedef enum
+{
+    BAP_MOTOR1,
+    BAP_MOTOR2
+}BAP_MOTOR_E;
 
 typedef struct TaskSharedVars_s
 {

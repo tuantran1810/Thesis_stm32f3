@@ -11,7 +11,7 @@
 
 #include "BAP_define.h"
 
-BAP_RESULT_E BAP_UART_InterSemaphoreInit(void);
+BAP_RESULT_E BAP_UARTModuleInit(void);
 BAP_RESULT_E BAP_UART_SendString(uint32_t uart, char* str, int strlen); 
 BAP_RESULT_E BAP_UART_RecvString(uint32_t uart, char* str, int strlen);
 BAP_RESULT_E BAP_UARTSendDMA(uint32_t uart, char *data, int size);
