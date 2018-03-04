@@ -10,6 +10,7 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "task.h"
 
 #include "BAP_task.h"
 #include "BAP_define.h"
@@ -58,8 +59,6 @@ void BAP_TaskRecvCmd(void* p)
                         }
                         else if(memcmp(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)], BAP_CTRL_STR_D, strlen(BAP_CTRL_STR_D)) == 0)
                         {
-                            BAP_LOG_DEBUG("BAP_CTRL_STR_D");
-                            BAP_LOG_DEBUG(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)]);
                             int tmp = atoi(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D) + strlen(BAP_CTRL_STR_D)]);
                             BAP_SemTakeMax(InterSharedVars_Se);
                             pSharedVars->PWM = tmp;
@@ -110,7 +109,7 @@ void BAP_TaskMotorControl(void* p)
         {
             BAP_LOG_DEBUG("OK\n\r");
             pSharedVars->flag = 0;
-            BAP_MotorChangePWMPeriod(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_FORWARD_OUT_D, pSharedVars->PWM);
+            BAP_MotorChangePosSetpoint(BAP_MOTOR1, (float)pSharedVars->PWM);
         }
         BAP_SemGive(InterSharedVars_Se);
     }
@@ -120,11 +119,16 @@ void BAP_TaskMotorControl(void* p)
 void BAP_TaskTesting(void* p)
 {
     TaskSharedVars_s* pSharedVars = (TaskSharedVars_s*)p;
+    char str[50] = {0};
     while(1)
     {
-        char tmp[30] = {0};
-        uint32_t pos = BAP_MotorGetPos(BAP_MOTOR1);
-        sprintf(tmp ,"pos = %p\n\r", pos);
-        BAP_LOG_DEBUG(tmp);
+        memset(str, 0, 50);
+        float deg = BAP_MotorGetPosDegree(BAP_MOTOR1);
+        sprintf(str, "deg = %f\n\r", deg);
+        BAP_LOG_DEBUG(str);
+        float pid_out = BAP_MotorGetPIDPosOutput(BAP_MOTOR1);
+        int tmp = (int)pid_out;
+        BAP_MotorChangeSpeed(BAP_MOTOR1, tmp);
+        vTaskDelay(20);
     }
 }

@@ -11,21 +11,28 @@ bool PID_Update_Param(PID_Controller* PID){
     return 1;
 }
 
-bool PID_Update(PID_Controller* PID, float KP, float KI, float KD, float dT, float setpoint){
+bool PID_Update(PID_Controller* PID, float KP, float KI, float KD, float dT, float k){
     PID->KP = KP;
     PID->KD = KD;
     PID->KI = KI;
     PID->dT = dT;
-    PID->setpoint = setpoint;
+    PID->k = k;
     return PID_Update_Param(PID);
 }
 
-bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT, float setpoint){
+bool PID_Update_Setpoint(PID_Controller* PID, float setpoint)
+{
+    PID->setpoint = setpoint;
+    return 1;
+}
+
+bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT, float k, float setpoint){
     PID->KP = KP;
     PID->KD = KD;
     PID->KI = KI;
     PID->dT = dT;
     PID->setpoint = setpoint;
+    PID->k = k;
     PID->uk_1 = 0;
     PID->ek_1 = 0;
     PID->ek_2 = 0;
@@ -34,9 +41,10 @@ bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT, float
 
 float PID_Get_Output(PID_Controller* PID, float respond){
     float ek = PID->setpoint - respond;
-    float uk = PID->uk_1 + PID->a*ek +PID->b*PID->ek_1 + PID->c*PID->ek_2;
+    float uk = PID->uk_1 + PID->a*ek + PID->b*PID->ek_1 + PID->c*PID->ek_2;
     PID->uk_1 = uk;
     PID->ek_2 = PID->ek_1;
     PID->ek_1 = ek;
-    return uk;
+    float ret = uk*PID->k;
+    return ret;
 }

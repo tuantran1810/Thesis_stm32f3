@@ -14,24 +14,112 @@
 #include "BAP_motor.h"
 #include "pid_controller.h"
 
-PID_Controller Motor2_PID;
-PID_Controller Motor1_PID;
+PID_Controller Motor1Pos_PID;
+PID_Controller Motor2Pos_PID;
 
 void BAP_MotorModuleInit(void)
 {
-    memset(&Motor1_PID, 0, sizeof(Motor1_PID));
-    memset(&Motor2_PID, 0, sizeof(Motor2_PID));
+    memset(&Motor1Pos_PID, 0, sizeof(Motor1Pos_PID));
+    memset(&Motor2Pos_PID, 0, sizeof(Motor2Pos_PID));
+    PID_Init(&Motor1Pos_PID, 3, 0, 0, 0.02, 1, 360*10);//(3, 0.005, 0.00001)
+    PID_Init(&Motor2Pos_PID, 1, 1, 1, 0.02, 1000, 0);
 }
 
-uint32_t BAP_MotorReadEncoder(uint32_t tim)
+BAP_RESULT_E BAP_MotorChangePosSetpoint(BAP_MOTOR_E motor, float setpoint)
 {
-    return timer_get_counter(tim);
+    float ret = 0;
+    switch(motor)
+    {
+        case BAP_MOTOR1:
+            ret = PID_Update_Setpoint(&Motor1Pos_PID, setpoint);
+            break;
+        case BAP_MOTOR2:
+            ret = PID_Update_Setpoint(&Motor2Pos_PID, setpoint);
+            break;
+        default:
+            return ret;
+    }
+    return ret;
+}
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+BAP_RESULT_E BAP_MotorChangeSpeed(BAP_MOTOR_E motor, int speed)
+{
+    const uint32_t tim = BAP_PWM_TIMER_D;
+    int tmp_speed = 0;
+    enum tim_oc_id tmp_oc = 0;
+    enum tim_oc_id zero_oc = 0;
+    switch(motor)
+    {
+        case BAP_MOTOR1:
+            if(speed > 0)
+            {
+                tmp_speed = speed;
+                tmp_oc = BAP_PWM_MOTOR1_FORWARD_OUT_D;
+                zero_oc = BAP_PWM_MOTOR1_BACKWARD_OUT_D;
+            }
+            else
+            {
+                tmp_speed = -(speed);
+                tmp_oc = BAP_PWM_MOTOR1_BACKWARD_OUT_D;
+                zero_oc = BAP_PWM_MOTOR1_FORWARD_OUT_D;
+            }
+            break;
+        case BAP_MOTOR2:
+            if(speed > 0)
+            {
+                tmp_speed = speed;
+                tmp_oc = BAP_PWM_MOTOR2_FORWARD_OUT_D;
+                zero_oc = BAP_PWM_MOTOR2_BACKWARD_OUT_D;
+            }
+            else
+            {
+                tmp_speed = -(speed);
+                tmp_oc = BAP_PWM_MOTOR2_BACKWARD_OUT_D;
+                zero_oc = BAP_PWM_MOTOR2_FORWARD_OUT_D;
+            }
+            break;
+        default:
+            return BAP_FAILED_WRONG_PAR;
+    }
+
+    tmp_speed = (tmp_speed > BAP_MAX_PWM_PULSEWIDTH_D) ? BAP_MAX_PWM_PULSEWIDTH_D : tmp_speed;
+
+    BAP_MotorChangePWMPeriod(tim, tmp_oc, tmp_speed);
+    BAP_MotorChangePWMPeriod(tim, zero_oc, 0);
+    return BAP_SUCCESS;
 }
 
 BAP_RESULT_E BAP_MotorChangePWMPeriod(uint32_t tim, enum tim_oc_id oc_id, int period)
 {
     timer_set_oc_value(tim, oc_id, period);
     return BAP_SUCCESS;
+}
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+float BAP_MotorGetPIDPosOutput(BAP_MOTOR_E motor)
+{
+    float ret = 0;
+    switch(motor)
+    {
+        case BAP_MOTOR1:
+            ret = PID_Get_Output(&Motor1Pos_PID, BAP_MotorGetPosDegree(motor));
+            break;
+        case BAP_MOTOR2:
+            ret = PID_Get_Output(&Motor2Pos_PID, BAP_MotorGetPosDegree(motor));
+            break;
+        default:
+            return ret;
+    }
+    return ret;
+}
+
+float BAP_MotorGetPosDegree(BAP_MOTOR_E motor)
+{
+    float deg = 0;
+    uint32_t pos = BAP_MotorGetPos(motor);
+    deg = (float)(pos - BAP_MOTOR_START_POS_D);
+    deg = (deg/(float)BAP_ENCODER_PULSE_PER_ROUND_D)*360.0;
+    return deg;
 }
 
 uint32_t BAP_MotorGetPos(BAP_MOTOR_E motor)
@@ -70,4 +158,9 @@ uint32_t BAP_MotorGetPos(BAP_MOTOR_E motor)
 
     *prepos = presentpos;
     return (*ret);
+}
+
+uint32_t BAP_MotorReadEncoder(uint32_t tim)
+{
+    return timer_get_counter(tim);
 }

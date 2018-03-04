@@ -11,7 +11,7 @@
 
 #define BAP_SYSTEM_CLOCK_HZ_D                   64000000
 #define BAP_UART_BAUDRATE_D                     115200
-#define BAP_MOTOR_START_POS_D					0x80000000
+#define BAP_MOTOR_START_POS_D					2147483648 // = 0x80000000
 
 #define BAP_UART_STARTMESSAGE_LENGTH_D          11
 #define BAP_UART_STARTMESSAGE_STR_LENGTH_D      BAP_UART_STARTMESSAGE_LENGTH_D - 2
@@ -39,9 +39,11 @@
 #define BAP_PWM_MOTOR1_BACKWARD_OUT_D           TIM_OC2
 #define BAP_PWM_MOTOR2_FORWARD_OUT_D            TIM_OC3
 #define BAP_PWM_MOTOR2_BACKWARD_OUT_D           TIM_OC4
+#define BAP_MAX_PWM_PULSEWIDTH_D				999
 
 #define BAP_MOTOR1_ENCODER_TIMER_D              TIM4
 #define BAP_MOTOR2_ENCODER_TIMER_D              TIM8
+#define BAP_ENCODER_PULSE_PER_ROUND_D			3072
 
 //Macro functions
 #define BAP_LOG_DEBUG(MESS)                     BAP_UART_SendString(BAP_UART_DEBUG_CH_D, MESS, strlen(MESS))

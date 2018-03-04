@@ -44,7 +44,8 @@ int main(void)
     BAP_SetupUSARTWithDMA(BAP_UART_CMD_CH_D, BAP_UART_BAUDRATE_D, 1);
     BAP_SetupUSARTWithDMA(BAP_UART_DEBUG_CH_D, BAP_UART_BAUDRATE_D, 0);
 
-    BAP_SetupPWM(BAP_PWM_TIMER_D, BAP_SYSTEM_CLOCK_HZ_D/1000000, 1000); //config Timer1 PWM to run at 1kHz
+    //config Timer1 PWM to run at 1kHz, resolution 1000 (0 to 999)
+    BAP_SetupPWM(BAP_PWM_TIMER_D, BAP_SYSTEM_CLOCK_HZ_D/1000000, 1000); 
     BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_FORWARD_OUT_D);
     BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_BACKWARD_OUT_D);
     BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_FORWARD_OUT_D);
@@ -63,7 +64,7 @@ int main(void)
 
     xTaskCreate(BAP_TaskRecvCmd, "USART2 Recv Command Handler", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
     xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
-    xTaskCreate(BAP_TaskTesting, "BAP_TaskTesting", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
+    xTaskCreate(BAP_TaskTesting, "BAP_TaskTesting", 300, (void*)&SharedVars, 1, NULL);
     vTaskStartScheduler();
 
     while(1);
