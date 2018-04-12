@@ -29,96 +29,111 @@ void BAP_TaskModuleInit(void)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void BAP_TaskRecvCmd(void* p)
 {
-    TaskSharedVars_s* pSharedVars = (TaskSharedVars_s*)p;
+    TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
+
+    char CMDUART_Recv_Buffer1[BAP_MAX_UART_MESSAGE_LENGTH_D];
+    char CMDUART_Recv_Buffer2[BAP_MAX_UART_MESSAGE_LENGTH_D];
+    char* CMDUART_Recv_Buffer_Write = CMDUART_Recv_Buffer1;
+    char* CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer2;
+    
+    char x_chr[BAP_UART_BPOS_XY_LENGTH_D+1];
+    char y_chr[BAP_UART_BPOS_XY_LENGTH_D+1];
+    char length_ch[3];
+    int x, y, length;
+
+    BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Write);
+    BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Read);
+    BAP_CLEAN_BUFFER(x_chr);
+    BAP_CLEAN_BUFFER(y_chr);
+    BAP_CLEAN_BUFFER(length_ch);
+
+    BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_Recv_Buffer_Write, BAP_MAX_UART_MESSAGE_LENGTH_D);
+
     while(1)
     {
-        BAP_SemTakeMax(CMDUART_RecvStartMess_Se);
-        
-        BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_STARTNEWTURN_STR_D, strlen(BAP_STARTNEWTURN_STR_D));
-        BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_RecvStartMess_Buffer, BAP_UART_STARTMESSAGE_LENGTH_D);
-
-        if(BAP_SemTake(CMDUART_Recv_Se, portMAX_DELAY) == pdPASS)
+        x = 0;
+        y = 0;
+        length = 0;
+        if(BAP_SemTake(CMDUART_Recv_Se, BAP_MAX_TICK_TO_WAIT_MESSAGE_D) == pdPASS)
         {
-            if(memcmp(CMDUART_RecvStartMess_Buffer, BAP_STARTMESS_STR_D, BAP_UART_STARTMESSAGE_STR_LENGTH_D) == 0)
+            if(CMDUART_Recv_Buffer1 == CMDUART_Recv_Buffer_Write)
             {
-                int length = 0;
-                length = atoi(&CMDUART_RecvStartMess_Buffer[BAP_UART_STARTMESSAGE_STR_LENGTH_D]);
+                CMDUART_Recv_Buffer_Write = CMDUART_Recv_Buffer2;
+                CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer1;                
+            }            
+            else
+            {
+                CMDUART_Recv_Buffer_Write = CMDUART_Recv_Buffer1;
+                CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer2;                
+            }
+            BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_Recv_Buffer_Write, BAP_MAX_UART_MESSAGE_LENGTH_D);
+            // command format: UUUUUUUUUU[length(2)][CmdStr(4)][par par par ...]
+            memcpy(length_ch, &CMDUART_Recv_Buffer_Read[11], 2); //Number with 2 digits
+            length = atoi(length_ch);
 
-                BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVOK_STR_D, strlen(BAP_RECVOK_STR_D));
-                BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_Recv_Buffer, (int)length);
-                if(BAP_SemTake(CMDUART_Recv_Se, portMAX_DELAY) == pdPASS)
+            if (length <= BAP_MAX_UART_MESSAGE_LENGTH_D && length > 22)
+            {
+                if(memcmp(&CMDUART_Recv_Buffer_Read[15], BAP_BPOS_STR_D, strlen(BAP_BPOS_STR_D)) == 0)
                 {
-                    BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVOK_STR_D, strlen(BAP_RECVOK_STR_D));
+                    //Receive BPos command with syntax: UUUUUUUUUU[xx][BPos][xxx yyy]
+                    memcpy(x_chr, &CMDUART_Recv_Buffer_Read[21], BAP_UART_BPOS_XY_LENGTH_D);
+                    memcpy(y_chr, &CMDUART_Recv_Buffer_Read[25], BAP_UART_BPOS_XY_LENGTH_D);
+                    // BAP_LOG_DEBUG(CMDUART_Recv_Buffer_Read);
+                    BAP_LOG_DEBUG(x_chr);
+                    // BAP_LOG_DEBUG(y_chr);
 
-                    if(memcmp(CMDUART_Recv_Buffer, BAP_CMDMESS_STR_D, strlen(BAP_CMDMESS_STR_D)) == 0)
-                    {
-                        if(memcmp(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)], BAP_BPOS_STR_D, strlen(BAP_BPOS_STR_D)) == 0)
-                        {
-                            BAP_LOG_DEBUG("BAP_BPOS_STR_D");
-                            BAP_LOG_DEBUG(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)]);
-                        }
-                        else if(memcmp(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)], BAP_CTRL_STR_D, strlen(BAP_CTRL_STR_D)) == 0)
-                        {
-                            int tmp = atoi(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D) + strlen(BAP_CTRL_STR_D)]);
-                            BAP_SemTakeMax(InterSharedVars_Se);
-                            pSharedVars->PWM = tmp;
-                            pSharedVars->flag = 1;
-                            BAP_SemGive(InterSharedVars_Se);
+                    x = atoi(x_chr);
+                    y = atoi(y_chr);
 
-                        }
-                        else if(memcmp(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)], BAP_SETPOINT_STR_D, strlen(BAP_SETPOINT_STR_D)) == 0)
-                        {
-                            BAP_LOG_DEBUG("BAP_SETPOINT_STR_D");
-                            BAP_LOG_DEBUG(&CMDUART_Recv_Buffer[strlen(BAP_CMDMESS_STR_D)]);
-                        }
-                        else
-                        {
-                            //TODO
-                        }
-                    }
+                    BAP_SemTakeMax(InterSharedVars_Se);
+                    pSharedVars->RecvPos.x = x;
+                    pSharedVars->RecvPos.y = y;
+                    pSharedVars->RecvPos.new_flag = 1;
+                    BAP_SemGive(InterSharedVars_Se);
+                }
+                else if(memcmp(&CMDUART_Recv_Buffer_Read[strlen(BAP_CMDMESS_STR_D)], BAP_CTRL_STR_D, strlen(BAP_CTRL_STR_D)) == 0)
+                {
+                    //TODO
+                }
+                else if(memcmp(&CMDUART_Recv_Buffer_Read[strlen(BAP_CMDMESS_STR_D)], BAP_SETPOINT_STR_D, strlen(BAP_SETPOINT_STR_D)) == 0)
+                {
+                    //TODO
                 }
                 else
                 {
-                    BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
+
                 }
             }
-            else
-            {
-                BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
-            }
         }
-        else
-        {
-            BAP_UART_SendString(BAP_UART_CMD_CH_D, BAP_RECVNG_STR_D, strlen(BAP_RECVNG_STR_D));
-        }
-        BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer);
-        BAP_CLEAN_BUFFER(CMDUART_RecvStartMess_Buffer);
-        BAP_SemGive(CMDUART_RecvStartMess_Se);
-        
+
+        BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Read);
+        BAP_CLEAN_BUFFER(x_chr);
+        BAP_CLEAN_BUFFER(y_chr);
+        BAP_CLEAN_BUFFER(length_ch);
     }
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void BAP_TaskMotorControl(void* p)
 {
-    TaskSharedVars_s* pSharedVars = (TaskSharedVars_s*)p;
+    TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
     while(1)
     {
-        BAP_SemTakeMax(InterSharedVars_Se);
-        if(pSharedVars->flag)
-        {
-            BAP_LOG_DEBUG("OK\n\r");
-            pSharedVars->flag = 0;
-            BAP_MotorChangePosSetpoint(BAP_MOTOR1, (float)pSharedVars->PWM);
-        }
-        BAP_SemGive(InterSharedVars_Se);
+        // BAP_SemTakeMax(InterSharedVars_Se);
+        // if(pSharedVars->flag)
+        // {
+        //     BAP_LOG_DEBUG("OK\n\r");
+        //     pSharedVars->flag = 0;
+        //     BAP_MotorChangePosSetpoint(BAP_MOTOR1, (float)pSharedVars->PWM);
+        // }
+        // BAP_SemGive(InterSharedVars_Se);
     }
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void BAP_TaskTesting(void* p)
 {
-    TaskSharedVars_s* pSharedVars = (TaskSharedVars_s*)p;
+    TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
     char str[50] = {0};
     while(1)
     {

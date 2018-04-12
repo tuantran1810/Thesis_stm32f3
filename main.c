@@ -27,44 +27,23 @@
 #include "BAP_motor.h"
 
 SemaphoreHandle_t CMDUART_Send_Se;
-
 SemaphoreHandle_t CMDUART_Recv_Se;
-char CMDUART_Recv_Buffer[BAP_MAX_UART_MESSAGE_LENGTH_D] = {0};
-
-SemaphoreHandle_t CMDUART_RecvStartMess_Se;
-char CMDUART_RecvStartMess_Buffer[BAP_UART_STARTMESSAGE_LENGTH_D] = {0};
-
-TaskSharedVars_s SharedVars;
+TaskSharedVars_S SharedVars;
 
 int main(void)
 {
-    BAP_SetupClock();
-    BAP_SetupGPIO();
-
-    BAP_SetupUSARTWithDMA(BAP_UART_CMD_CH_D, BAP_UART_BAUDRATE_D, 1);
-    BAP_SetupUSARTWithDMA(BAP_UART_DEBUG_CH_D, BAP_UART_BAUDRATE_D, 0);
-
-    //config Timer1 PWM to run at 1kHz, resolution 1000 (0 to 999)
-    BAP_SetupPWM(BAP_PWM_TIMER_D, BAP_SYSTEM_CLOCK_HZ_D/1000000, 1000); 
-    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_FORWARD_OUT_D);
-    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_BACKWARD_OUT_D);
-    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_FORWARD_OUT_D);
-    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_BACKWARD_OUT_D);
-
-    BAP_SetupEncoder(BAP_MOTOR1_ENCODER_TIMER_D);
-    BAP_SetupEncoder(BAP_MOTOR2_ENCODER_TIMER_D);
-
-    SharedVars.PWM = 0;
-    SharedVars.flag = 0;
-
     BAP_SetupModuleInit();
     BAP_UARTModuleInit();
-    BAP_TaskModuleInit();
     BAP_MotorModuleInit();
+    BAP_TaskModuleInit();
+
+    BAP_LOG_DEBUG("System Start!!!");
+
+    memset(&SharedVars, 0, sizeof(TaskSharedVars_S));
 
     xTaskCreate(BAP_TaskRecvCmd, "USART2 Recv Command Handler", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
-    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
-    xTaskCreate(BAP_TaskTesting, "BAP_TaskTesting", 300, (void*)&SharedVars, 1, NULL);
+    // xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 1, NULL);
+    // xTaskCreate(BAP_TaskTesting, "BAP_TaskTesting", 300, (void*)&SharedVars, 1, NULL);
     vTaskStartScheduler();
 
     while(1);

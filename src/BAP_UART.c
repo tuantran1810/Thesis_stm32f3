@@ -41,16 +41,28 @@ BAP_RESULT_E BAP_UART_SendString(uint32_t uart, char* str, int strlen)
     if ((uart != USART1) && (uart != USART2) && (uart != USART3) && (uart != UART4) && (uart != UART5))
         return BAP_FAILED_WRONG_PAR;
 
-    if (uart == BAP_UART_CMD_CH_D) BAP_SemTakeMax(InterCMDUART_Send_Se);
-    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemTakeMax(InterDEBUGUART_Send_Se);
+    if (uart == BAP_UART_CMD_CH_D)
+    {
+        BAP_SemTakeMax(InterCMDUART_Send_Se);
+    }
+    else if (uart == BAP_UART_DEBUG_CH_D)
+    {
+        BAP_SemTakeMax(InterDEBUGUART_Send_Se);
+    }
 
     for (int i = 0; i < strlen; i++)
     {
         usart_send_blocking(uart, str[i]);
     }
 
-    if (uart == BAP_UART_CMD_CH_D) BAP_SemGive(InterCMDUART_Send_Se);
-    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemGive(InterDEBUGUART_Send_Se);
+    if (uart == BAP_UART_CMD_CH_D)
+    {
+        BAP_SemGive(InterCMDUART_Send_Se);
+    }
+    else if (uart == BAP_UART_DEBUG_CH_D)
+    {
+        BAP_SemGive(InterDEBUGUART_Send_Se);
+    }
 
     return BAP_SUCCESS;
 }
@@ -65,8 +77,14 @@ BAP_RESULT_E BAP_UART_RecvString(uint32_t uart, char* str, int strlen)
     
     int count = 0;
 
-    if (uart == BAP_UART_CMD_CH_D) BAP_SemTakeMax(InterCMDUART_Recv_Se);
-    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemTakeMax(InterDEBUGUART_Recv_Se);
+    if (uart == BAP_UART_CMD_CH_D)
+    {
+        BAP_SemTakeMax(InterCMDUART_Recv_Se);
+    }
+    else if (uart == BAP_UART_DEBUG_CH_D)
+    {
+        BAP_SemTakeMax(InterDEBUGUART_Recv_Se);
+    }
 
     for (int i=0; i<strlen; i++)
     {
@@ -74,8 +92,14 @@ BAP_RESULT_E BAP_UART_RecvString(uint32_t uart, char* str, int strlen)
         count++;
     }
 
-    if (uart == BAP_UART_CMD_CH_D) BAP_SemGive(InterCMDUART_Recv_Se);
-    else if (uart == BAP_UART_DEBUG_CH_D) BAP_SemGive(InterDEBUGUART_Recv_Se);
+    if (uart == BAP_UART_CMD_CH_D)
+    {
+        BAP_SemGive(InterCMDUART_Recv_Se);
+    }
+    else if (uart == BAP_UART_DEBUG_CH_D) 
+    {
+        BAP_SemGive(InterDEBUGUART_Recv_Se);
+    }
 
     return BAP_SUCCESS;
 }

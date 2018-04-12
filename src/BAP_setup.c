@@ -193,7 +193,20 @@ void BAP_SetupModuleInit(void)
 {
     BAP_SemCreateBin(CMDUART_Send_Se);
     BAP_SemCreateBin(CMDUART_Recv_Se);
-    BAP_SemCreateBin(CMDUART_RecvStartMess_Se);
 
-    BAP_SemGive(CMDUART_RecvStartMess_Se);
+    BAP_SetupClock();
+    BAP_SetupGPIO();
+
+    BAP_SetupUSARTWithDMA(BAP_UART_CMD_CH_D, BAP_UART_BAUDRATE_D, 1);
+    BAP_SetupUSARTWithDMA(BAP_UART_DEBUG_CH_D, BAP_UART_BAUDRATE_D, 0);
+
+    //config Timer1 PWM to run at 1kHz, resolution 1000 (0 to 999)
+    BAP_SetupPWM(BAP_PWM_TIMER_D, BAP_SYSTEM_CLOCK_HZ_D/1000000, 1000); 
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_FORWARD_OUT_D);
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR1_BACKWARD_OUT_D);
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_FORWARD_OUT_D);
+    BAP_SetupPWMOutputEnable(BAP_PWM_TIMER_D, BAP_PWM_MOTOR2_BACKWARD_OUT_D);
+
+    BAP_SetupEncoder(BAP_MOTOR1_ENCODER_TIMER_D);
+    BAP_SetupEncoder(BAP_MOTOR2_ENCODER_TIMER_D);
 }
