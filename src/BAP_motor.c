@@ -13,7 +13,6 @@
 #include "BAP_define.h"
 #include "BAP_motor.h"
 
-void BAP_MotorInit(BAP_Motor_S* motor, BAP_MotorInit_S* input);
 uint32_t BAP_MotorReadEncoder(BAP_Motor_S* motor);
 uint32_t BAP_MotorGetPos(BAP_Motor_S* motor);
 BAP_RESULT_E BAP_MotorChangePWMPeriod(BAP_Motor_S* motor, BAP_MOTOR_DIR_E dir, int period);
