@@ -36,8 +36,26 @@ bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT, float
     PID->uk_1 = 0;
     PID->ek_1 = 0;
     PID->ek_2 = 0;
+    PID->with_limit = false;
     return PID_Update_Param(PID);
 }
+
+bool PID_OutputLimit_Enable(PID_Controller* PID, float lower, float upper)
+{
+    PID->lower_limit = lower;
+    PID->upper_limit = upper;
+    PID->with_limit = true;
+    return true;
+}
+
+bool PID_OutputLimit_Disable(PID_Controller* PID)
+{
+    PID->lower_limit = 0;
+    PID->upper_limit = 0;
+    PID->with_limit = false;
+    return true;
+}
+
 
 float PID_Get_Output(PID_Controller* PID, float respond){
     float ek = PID->setpoint - respond;
@@ -46,5 +64,17 @@ float PID_Get_Output(PID_Controller* PID, float respond){
     PID->ek_2 = PID->ek_1;
     PID->ek_1 = ek;
     float ret = uk*PID->k;
+
+    if(PID->with_limit)
+    {
+        if(ret > PID->upper_limit)
+        {
+            return PID->upper_limit;
+        }
+        else if (ret < PID->lower_limit)
+        {
+            return PID->lower_limit;
+        }
+    }
     return ret;
 }

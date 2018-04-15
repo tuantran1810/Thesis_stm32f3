@@ -18,12 +18,21 @@
 #include "BAP_setup.h"
 #include "BAP_motor.h"
 
+SemaphoreHandle_t InterSharedVar_RecvPos_Se;
 SemaphoreHandle_t InterSharedVars_Se;
+
+BAP_Motor_S BAP_xAxistMotor;
+BAP_Motor_S BAP_yAxistMotor;
+
+void BAP_TaskMotorConfig(void);
 
 void BAP_TaskModuleInit(void)
 {
     BAP_SemCreateBin(InterSharedVars_Se);
     BAP_SemGive(InterSharedVars_Se);
+    BAP_SemCreateBin(InterSharedVar_RecvPos_Se);
+    BAP_SemGive(InterSharedVar_RecvPos_Se);
+    BAP_TaskMotorConfig();
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -67,29 +76,27 @@ void BAP_TaskRecvCmd(void* p)
                 CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer2;                
             }
             BAP_UARTRecvDMA(BAP_UART_CMD_CH_D, CMDUART_Recv_Buffer_Write, BAP_MAX_UART_MESSAGE_LENGTH_D);
-            // command format: UUUUUUUUUU[length(2)][CmdStr(4)][par par par ...]
-            memcpy(length_ch, &CMDUART_Recv_Buffer_Read[11], 2); //Number with 2 digits
+            // command format: [length(2)][CmdStr(4)][par par par ...]
+            memcpy(length_ch, &CMDUART_Recv_Buffer_Read[1], 2); //Number with 2 digits
             length = atoi(length_ch);
 
-            if (length <= BAP_MAX_UART_MESSAGE_LENGTH_D && length > 22)
+            if (length <= BAP_MAX_UART_MESSAGE_LENGTH_D && length > 12)
             {
-                if(memcmp(&CMDUART_Recv_Buffer_Read[15], BAP_BPOS_STR_D, strlen(BAP_BPOS_STR_D)) == 0)
+                if(memcmp(&CMDUART_Recv_Buffer_Read[5], BAP_BPOS_STR_D, strlen(BAP_BPOS_STR_D)) == 0)
                 {
-                    //Receive BPos command with syntax: UUUUUUUUUU[xx][BPos][xxx yyy]
-                    memcpy(x_chr, &CMDUART_Recv_Buffer_Read[21], BAP_UART_BPOS_XY_LENGTH_D);
-                    memcpy(y_chr, &CMDUART_Recv_Buffer_Read[25], BAP_UART_BPOS_XY_LENGTH_D);
-                    // BAP_LOG_DEBUG(CMDUART_Recv_Buffer_Read);
-                    BAP_LOG_DEBUG(x_chr);
-                    // BAP_LOG_DEBUG(y_chr);
+                    //Receive BPos command with syntax: [xx][BPos][xxx yyy]
+                    memcpy(x_chr, &CMDUART_Recv_Buffer_Read[11], BAP_UART_BPOS_XY_LENGTH_D);
+                    memcpy(y_chr, &CMDUART_Recv_Buffer_Read[15], BAP_UART_BPOS_XY_LENGTH_D);
 
                     x = atoi(x_chr);
                     y = atoi(y_chr);
 
+                    BAP_LOG_DEBUG(x_chr);
                     BAP_SemTakeMax(InterSharedVars_Se);
                     pSharedVars->RecvPos.x = x;
                     pSharedVars->RecvPos.y = y;
-                    pSharedVars->RecvPos.new_flag = 1;
                     BAP_SemGive(InterSharedVars_Se);
+                    BAP_SemGive(InterSharedVar_RecvPos_Se);
                 }
                 else if(memcmp(&CMDUART_Recv_Buffer_Read[strlen(BAP_CMDMESS_STR_D)], BAP_CTRL_STR_D, strlen(BAP_CTRL_STR_D)) == 0)
                 {
@@ -117,16 +124,20 @@ void BAP_TaskRecvCmd(void* p)
 void BAP_TaskMotorControl(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
+    int x = 0;
+    int y = 0;
     while(1)
     {
-        // BAP_SemTakeMax(InterSharedVars_Se);
-        // if(pSharedVars->flag)
-        // {
-        //     BAP_LOG_DEBUG("OK\n\r");
-        //     pSharedVars->flag = 0;
-        //     BAP_MotorChangePosSetpoint(BAP_MOTOR1, (float)pSharedVars->PWM);
-        // }
-        // BAP_SemGive(InterSharedVars_Se);
+        if(BAP_SemTakeMax(InterSharedVar_RecvPos_Se) == pdPASS)
+        {
+            BAP_SemTakeMax(InterSharedVars_Se);
+            x = pSharedVars->RecvPos.x;
+            y = pSharedVars->RecvPos.y;
+            BAP_SemGive(InterSharedVars_Se);
+            char str[40];
+            sprintf(str, "x = %d", x);
+            BAP_LOG_DEBUG(str);
+        }
     }
 }
 
@@ -135,15 +146,49 @@ void BAP_TaskTesting(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
     char str[50] = {0};
+    float deg = 0;
+    float pid_out = 0;
+    uint32_t enc = 0;
     while(1)
     {
         memset(str, 0, 50);
-        float deg = BAP_MotorGetPosDegree(BAP_MOTOR1);
-        sprintf(str, "deg = %f\n\r", deg);
+        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &deg);
+        sprintf(str, "deg = %f", deg);
         BAP_LOG_DEBUG(str);
-        float pid_out = BAP_MotorGetPIDPosOutput(BAP_MOTOR1);
-        int tmp = (int)pid_out;
-        BAP_MotorChangeSpeed(BAP_MOTOR1, tmp);
+        // BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
+        // int tmp = (int)pid_out;
+        // BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, tmp);
         vTaskDelay(20);
     }
+}
+
+void BAP_TaskMotorConfig(void)
+{
+    memset(&BAP_xAxistMotor, 0, sizeof(BAP_xAxistMotor));
+    memset(&BAP_yAxistMotor, 0, sizeof(BAP_yAxistMotor));
+
+    BAP_MotorInit_S input;
+
+    //for xAxist motor
+    input.enc_tim = BAP_XAXISTMOTOR_ENCODER_TIMER_D;
+    input.pwm_tim = BAP_PWM_TIMER_D;
+    input.forward_output = BAP_PWM_XAXISTMOTOR_FORWARD_OUT_D;
+    input.backward_output = BAP_PWM_XAXISTMOTOR_BACKWARD_OUT_D;
+
+    input.KP = 3;
+    input.KI = 0;
+    input.KD = 0;
+    input.dT = 0.02;
+    input.k = 1;
+    input.setpoint = 0;
+
+    BAP_MotorInit(&BAP_xAxistMotor, &input);
+
+    //for yAxist motor
+    input.enc_tim = BAP_YAXISTMOTOR_ENCODER_TIMER_D;
+    input.pwm_tim = BAP_PWM_TIMER_D;
+    input.forward_output = BAP_PWM_YAXISTMOTOR_FORWARD_OUT_D;
+    input.backward_output = BAP_PWM_YAXISTMOTOR_BACKWARD_OUT_D;
+
+    BAP_MotorInit(&BAP_xAxistMotor, &input);
 }

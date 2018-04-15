@@ -10,7 +10,7 @@
 #include "semphr.h"
 
 #define BAP_SYSTEM_CLOCK_HZ_D                   64000000
-#define BAP_UART_BAUDRATE_D                     460800
+#define BAP_UART_BAUDRATE_D                     230400
 #define BAP_MOTOR_START_POS_D					2147483648 // = 0x80000000
 
 #define BAP_UART_STARTMESSAGE_STR_LENGTH_D      BAP_UART_STARTMESSAGE_LENGTH_D - 2
@@ -18,7 +18,7 @@
 #define BAP_MAX_UART_MESSAGE_LENGTH_D           40
 #define BAP_UART_BPOS_XY_LENGTH_D               3
 
-#define BAP_MAX_TICK_TO_WAIT_MESSAGE_D          (TickType_t)10
+#define BAP_MAX_TICK_TO_WAIT_MESSAGE_D          (TickType_t)20
 
 #define BAP_STARTNEWTURN_STR_D                  "2StartNewTurn3"
 #define BAP_RECVOK_STR_D                        "2RecvOK3"
@@ -34,14 +34,14 @@
 #define BAP_UART_DEBUG_CH_D                     UART5
 
 #define BAP_PWM_TIMER_D                         TIM1
-#define BAP_PWM_MOTOR1_FORWARD_OUT_D            TIM_OC1
-#define BAP_PWM_MOTOR1_BACKWARD_OUT_D           TIM_OC2
-#define BAP_PWM_MOTOR2_FORWARD_OUT_D            TIM_OC3
-#define BAP_PWM_MOTOR2_BACKWARD_OUT_D           TIM_OC4
+#define BAP_PWM_XAXISTMOTOR_FORWARD_OUT_D       TIM_OC1
+#define BAP_PWM_XAXISTMOTOR_BACKWARD_OUT_D      TIM_OC2
+#define BAP_PWM_YAXISTMOTOR_FORWARD_OUT_D       TIM_OC3
+#define BAP_PWM_YAXISTMOTOR_BACKWARD_OUT_D      TIM_OC4
 #define BAP_MAX_PWM_PULSEWIDTH_D				999
 
-#define BAP_MOTOR1_ENCODER_TIMER_D              TIM4
-#define BAP_MOTOR2_ENCODER_TIMER_D              TIM8
+#define BAP_XAXISTMOTOR_ENCODER_TIMER_D         TIM4
+#define BAP_YAXISTMOTOR_ENCODER_TIMER_D         TIM8
 #define BAP_ENCODER_PULSE_PER_ROUND_D			3072
 
 //Macro functions
@@ -63,15 +63,15 @@ typedef enum
 
 typedef enum
 {
-    BAP_MOTOR1,
-    BAP_MOTOR2
-}BAP_MOTOR_E;
+    BAP_MOTORDIR_FORWARD,
+    BAP_MOTORDIR_BACKWARD,
+    BAP_MOTORDIR_BUTT
+}BAP_MOTOR_DIR_E;
 
 typedef struct TaskSharedVars_RecvPos_S
 {
     int x;
     int y;
-    bool new_flag;
 }TaskSharedVars_RecvPos_S;
 
 typedef struct TaskSharedVars_S
