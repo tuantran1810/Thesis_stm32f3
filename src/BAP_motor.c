@@ -104,7 +104,8 @@ BAP_RESULT_E BAP_MotorGetPIDPosOutput(BAP_Motor_S* motor, float* ret_PIDout)
         return BAP_FAILED_NULL_PTR;
     }
     float deg = 0;
-    *ret_PIDout = PID_Get_Output(&(motor->pid), BAP_MotorGetPosDegree(motor, &deg));
+    BAP_MotorGetPosDegree(motor, &deg);
+    *ret_PIDout = PID_Get_Output(&(motor->pid), deg);
     return BAP_SUCCESS;
 }
 

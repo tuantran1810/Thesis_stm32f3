@@ -153,11 +153,11 @@ void BAP_TaskTesting(void* p)
     {
         memset(str, 0, 50);
         BAP_MotorGetPosDegree(&BAP_xAxistMotor, &deg);
-        sprintf(str, "deg = %f", deg);
+        BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
+        int tmp = (int)pid_out;
+        BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, tmp);
+        sprintf(str, "deg = %f, pid_out = %d", deg, tmp);
         BAP_LOG_DEBUG(str);
-        // BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
-        // int tmp = (int)pid_out;
-        // BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, tmp);
         vTaskDelay(20);
     }
 }
@@ -180,7 +180,7 @@ void BAP_TaskMotorConfig(void)
     input.KD = 0;
     input.dT = 0.02;
     input.k = 1;
-    input.setpoint = 0;
+    input.setpoint = 360;
 
     BAP_MotorInit(&BAP_xAxistMotor, &input);
 
@@ -190,5 +190,5 @@ void BAP_TaskMotorConfig(void)
     input.forward_output = BAP_PWM_YAXISTMOTOR_FORWARD_OUT_D;
     input.backward_output = BAP_PWM_YAXISTMOTOR_BACKWARD_OUT_D;
 
-    BAP_MotorInit(&BAP_xAxistMotor, &input);
+    BAP_MotorInit(&BAP_yAxistMotor, &input);
 }
