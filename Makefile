@@ -7,6 +7,6 @@ LDSCRIPT = ../stm32f3-discovery.ld
 
 OBJS += RTOS/croutine.o RTOS/list.o RTOS/port.o RTOS/queue.o 
 OBJS += RTOS/stream_buffer.o RTOS/tasks.o RTOS/timers.o RTOS/portable/MemMang/heap_3.o
-OBJS += src/BAP_setup.o src/BAP_task.o src/BAP_UART.o src/pid_controller.o src/BAP_motor.o
+OBJS += src/BAP_setup.o src/BAP_task.o src/BAP_UART.o src/pid_controller.o src/BAP_motor.o src/BAP_DiscreteFunction.o src/BAP_SMC.o
 
 include ../../Makefile.include
