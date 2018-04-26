@@ -41,8 +41,8 @@ int main(void)
 
     memset(&SharedVars, 0, sizeof(TaskSharedVars_S));
 
-    // xTaskCreate(BAP_TaskRecvCmd, "USART2 Recv Command Handler", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 2, NULL);
-    // xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", 300, (void*)&SharedVars, 1, NULL);
+    xTaskCreate(BAP_TaskRecvCmd, "USART2 Recv Command Handler", configMINIMAL_STACK_SIZE, (void*)&SharedVars, 2, NULL);
+    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", 300, (void*)&SharedVars, 1, NULL);
     xTaskCreate(BAP_TaskTesting, "BAP_TaskTesting", 300, (void*)&SharedVars, 1, NULL);
     vTaskStartScheduler();
 

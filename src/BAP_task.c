@@ -24,7 +24,11 @@ SemaphoreHandle_t InterSharedVars_Se;
 BAP_Motor_S BAP_xAxistMotor;
 BAP_Motor_S BAP_yAxistMotor;
 
+PID_Controller BAP_xAxistPlateController;
+PID_Controller BAP_yAxistPlateController;
+
 void BAP_TaskMotorConfig(void);
+void BAP_TaskPlatePIDControllerConfig(void);
 
 void BAP_TaskModuleInit(void)
 {
@@ -33,6 +37,7 @@ void BAP_TaskModuleInit(void)
     BAP_SemCreateBin(InterSharedVar_RecvPos_Se);
     BAP_SemGive(InterSharedVar_RecvPos_Se);
     BAP_TaskMotorConfig();
+    BAP_TaskPlatePIDControllerConfig();
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -126,6 +131,7 @@ void BAP_TaskMotorControl(void* p)
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
     int x = 0;
     int y = 0;
+    float pid_out = 0;
     while(1)
     {
         if(BAP_SemTakeMax(InterSharedVar_RecvPos_Se) == pdPASS)
@@ -134,9 +140,9 @@ void BAP_TaskMotorControl(void* p)
             x = pSharedVars->RecvPos.x;
             y = pSharedVars->RecvPos.y;
             BAP_SemGive(InterSharedVars_Se);
-            char str[40];
-            sprintf(str, "x = %d", x);
-            BAP_LOG_DEBUG(str);
+            BAP_MotorChangePosSetpoint(&BAP_xAxistMotor, (float)x);
+            BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
+            BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)pid_out);
         }
     }
 }
@@ -153,13 +159,21 @@ void BAP_TaskTesting(void* p)
     {
         memset(str, 0, 50);
         BAP_MotorGetPosDegree(&BAP_xAxistMotor, &deg);
-        BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
-        int tmp = (int)pid_out;
-        BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, tmp);
-        sprintf(str, "deg = %f, pid_out = %d", deg, tmp);
+        // BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
+        // BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)pid_out);
+        sprintf(str, "deg = %f", deg);
         BAP_LOG_DEBUG(str);
-        vTaskDelay(20);
+        vTaskDelay(100);
     }
+}
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void BAP_TaskPlatePIDControllerConfig(void)
+{
+    PID_Init(&BAP_xAxistPlateController, 1, 0, 0, 0.02, 1, 0);
+    PID_OutputLimit_Enable(&BAP_xAxistPlateController, -15, 15);
+    PID_Init(&BAP_yAxistPlateController, 1, 0, 0, 0.02, 1, 0);
+    PID_OutputLimit_Enable(&BAP_yAxistPlateController, -15, 15);
 }
 
 void BAP_TaskMotorConfig(void)
@@ -175,9 +189,9 @@ void BAP_TaskMotorConfig(void)
     input.forward_output = BAP_PWM_XAXISTMOTOR_FORWARD_OUT_D;
     input.backward_output = BAP_PWM_XAXISTMOTOR_BACKWARD_OUT_D;
 
-    input.KP = 3;
+    input.KP = 4;
     input.KI = 0;
-    input.KD = 0;
+    input.KD = 0.01;
     input.dT = 0.02;
     input.k = 1;
     input.setpoint = 360;

@@ -24,7 +24,7 @@ void BAP_MotorModuleInit(void)
 
 void BAP_MotorInit(BAP_Motor_S* motor, BAP_MotorInit_S* input)
 {
-    memset(motor, 0, sizeof(motor));
+    memset(motor, 0, sizeof(BAP_Motor_S));
     motor->encoder.tim = input->enc_tim;
     motor->encoder.present_counter = 0;
     motor->encoder.past_counter = 0;

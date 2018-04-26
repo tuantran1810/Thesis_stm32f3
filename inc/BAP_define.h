@@ -46,7 +46,7 @@
 
 //Macro functions
 #define BAP_LOG_DEBUG(MESS)                     do {BAP_UART_SendString(BAP_UART_DEBUG_CH_D, MESS, strlen(MESS)); BAP_UART_SendString(BAP_UART_DEBUG_CH_D, "\n\r", 2);} while(0)
-#define BAP_CLEAN_BUFFER(BUFFER)                memset(BUFFER, 0, sizeof(BUFFER))
+#define BAP_CLEAN_BUFFER(BUFFER)                memset(BUFFER, 0, strlen(BUFFER))
 #define BAP_SemCreateBin(sem)                   sem = xSemaphoreCreateBinary()
 #define BAP_SemTake(sem, time)                  xSemaphoreTake(sem, time)
 #define BAP_SemTakeMax(sem)                     xSemaphoreTake(sem, portMAX_DELAY)

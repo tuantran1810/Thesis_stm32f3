@@ -17,9 +17,6 @@ typedef struct BAP_MotorEncoder_S
 typedef struct BAP_MotorPos_S
 {
 	float pos_degree;
-	bool with_limit;
-	float upper_limit;
-	float lower_limit;
 }BAP_MotorPos_S;
 
 typedef struct BAP_MotorPWM_S
