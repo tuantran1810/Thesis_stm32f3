@@ -6,6 +6,8 @@
 #include "BAP_DiscreteFunction.h"
 #include "BAP_SMC.h"
 
+BAP_RESULT_E BAP_SMCSliddingSurfaceCal(BAP_SMC_S* smc, float* out);
+
 BAP_RESULT_E BAP_SMCSecondOrderLFInit(BAP_SecondOrderLF_S* lf, float dT, float a)
 {
     if(lf == NULL)
@@ -18,7 +20,7 @@ BAP_RESULT_E BAP_SMCSecondOrderLFInit(BAP_SecondOrderLF_S* lf, float dT, float a
         return BAP_FAILED_WRONG_PAR;
     }
 
-    memset(lf, 0, sizeof(lf));
+    memset(lf, 0, sizeof(BAP_SecondOrderLF_S));
 
     lf->input.num_of_plus_samples = 0;
     lf->input.num_of_minus_samples = 2;
@@ -41,14 +43,18 @@ BAP_RESULT_E BAP_SMCSecondOrderLFGetOutput(BAP_SecondOrderLF_S* lf, float* out)
         return BAP_FAILED_NULL_PTR;
     }
 
-    *out = 2*lf->exp_minus_t_on_a2*lf->output.x_minus[1] 
+    float ret;
+    ret = 2*lf->exp_minus_t_on_a2*lf->output.x_minus[1] 
         - lf->exp_minus_t_on_a2*lf->exp_minus_t_on_a2*lf->output.x_minus[2]
         + lf->t_on_a2*lf->exp_minus_t_on_a2*lf->input.x_minus[1];
 
+    BAP_FuncSampleAppend(&(lf->output), ret);
+
+    *out = ret;
     return BAP_SUCCESS;
 }
 
-BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, float sat_lower, float k1, float K)
+BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, float sat_lower, float k1, float K, float yd)
 {
     if(smc == NULL)
     {
@@ -60,7 +66,7 @@ BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, f
         return BAP_FAILED_WRONG_PAR;
     }
 
-    memset(smc, 0, sizeof(smc));
+    memset(smc, 0, sizeof(BAP_SMC_S));
 
     smc->yd.num_of_plus_samples = order;
     smc->yd.num_of_minus_samples = 0;
@@ -75,6 +81,7 @@ BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, f
 
     smc->k1 = k1;
     smc->K = K;
+    smc->yd_in = yd;
 
     return BAP_SUCCESS;
 }
@@ -114,5 +121,28 @@ BAP_RESULT_E BAP_SMCOuputCal(BAP_SMC_S* smc, float* out)
     BAP_FuncGetSatOutput(&(smc->sat), sigma, &sign_sat_value);
 
     *out = BAP_SMC_FORMULA_CONST_D*(yd_dot_dot + smc->k1*e_dot + smc->K*sign_sat_value);
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SMCChangeSetPoint(BAP_SMC_S* smc, float yd)
+{
+    if(smc == NULL)
+    {
+        return BAP_FAILED_NULL_PTR;
+    }
+
+    smc->yd_in = yd;
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SMCUpdateParam(BAP_SMC_S* smc, float y)
+{
+    if(smc == NULL)
+    {
+        return BAP_FAILED_NULL_PTR;
+    }
+
+    BAP_FuncSampleAppend(&(smc->yd), smc->yd_in);
+    BAP_FuncSampleAppend(&(smc->e), smc->yd_in - y);
     return BAP_SUCCESS;
 }

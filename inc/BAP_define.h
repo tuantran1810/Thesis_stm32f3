@@ -12,6 +12,7 @@
 #define BAP_SYSTEM_CLOCK_HZ_D                   64000000
 #define BAP_UART_BAUDRATE_D                     230400
 #define BAP_MOTOR_START_POS_D					2147483648 // = 0x80000000
+#define BAP_DISCRETE_TIME_INTERVAL              0.02       //20ms
 
 #define BAP_UART_STARTMESSAGE_STR_LENGTH_D      BAP_UART_STARTMESSAGE_LENGTH_D - 2
 #define BAP_UART_CMDMESS_STR_LENGTH_D           7

@@ -17,7 +17,7 @@ BAP_RESULT_E BAP_FuncInit(BAP_DiscreteFunction_S* func, int plusnum, int minusnu
         return BAP_FAILED_WRONG_PAR;
     }
 
-    memset(func, 0, sizeof(func));
+    memset(func, 0, sizeof(BAP_DiscreteFunction_S));
     func->num_of_plus_samples = plusnum;
     func->num_of_minus_samples = minusnum;
     func->dT = dT;
