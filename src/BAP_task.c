@@ -179,16 +179,27 @@ void BAP_TaskMotorControl(void* p)
 void BAP_TaskTesting(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
-
+    float x_out = 0;
+    float y_out = 0;
+    float x_deg = 0;
+    float y_deg = 0;
+    char str[100];
     while(1)
     {
-        // memset(str, 0, 50);
-        // BAP_MotorGetPosDegree(&BAP_xAxistMotor, &deg);
-        // // BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &pid_out);
-        // // BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)pid_out);
-        // sprintf(str, "deg = %f", deg);
-        // BAP_LOG_DEBUG(str);
-        // vTaskDelay(100);
+        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &x_deg);
+        // BAP_MotorGetPosDegree(&BAP_yAxistMotor, &y_deg);
+        BAP_MotorChangePosSetpoint(&BAP_xAxistMotor, 30);
+        // BAP_MotorChangePosSetpoint(&BAP_yAxistMotor, 30);
+
+        BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &x_out); //PWM signal
+        // BAP_MotorGetPIDPosOutput(&BAP_yAxistMotor, &y_out); //PWM signal
+
+        BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)x_out);
+        // BAP_MotorChangeSpeedPWM(&BAP_yAxistMotor, (int)y_out);
+        sprintf(str, "deg x = %f, deg y = %f, x out = %d, y out = %d, tick = %d", x_deg, y_deg, (int)x_out, (int)y_out, xTaskGetTickCount());
+        BAP_LOG_DEBUG(str);
+
+        vTaskDelay(20);
     }
 }
 
@@ -201,25 +212,31 @@ void BAP_TaskMotorConfig(void)
     BAP_MotorInit_S input;
 
     //for xAxist motor
+    input.KP = 23;
+    input.KI = 0;
+    input.KD = 0;
+    input.dT = BAP_DISCRETE_TIME_INTERVAL;
+    input.k = 1;
+    input.setpoint = 0;
     input.enc_tim = BAP_XAXISTMOTOR_ENCODER_TIMER_D;
     input.pwm_tim = BAP_PWM_TIMER_D;
     input.forward_output = BAP_PWM_XAXISTMOTOR_FORWARD_OUT_D;
     input.backward_output = BAP_PWM_XAXISTMOTOR_BACKWARD_OUT_D;
 
-    input.KP = 4;
-    input.KI = 0;
-    input.KD = 0.01;
-    input.dT = BAP_DISCRETE_TIME_INTERVAL;
-    input.k = 1;
-    input.setpoint = 0;
-
     BAP_MotorInit(&BAP_xAxistMotor, &input);
 
     //for yAxist motor
+    //using Ziegler–Nichols method with Ku = 90, Tu = 120ms, Kp = 0.6Ku, Ki = 1.2Ku/Tu, Kp = 0.075*Ku*Tu
+    input.KP = 54;
+    input.KI = 900;
+    input.KD = 0.81;
+    input.dT = BAP_DISCRETE_TIME_INTERVAL;
+    input.k = 0;
+    input.setpoint = 0;
     input.enc_tim = BAP_YAXISTMOTOR_ENCODER_TIMER_D;
     input.pwm_tim = BAP_PWM_TIMER_D;
     input.forward_output = BAP_PWM_YAXISTMOTOR_FORWARD_OUT_D;
     input.backward_output = BAP_PWM_YAXISTMOTOR_BACKWARD_OUT_D;
 
-    BAP_MotorInit(&BAP_yAxistMotor, &input);
+    // BAP_MotorInit(&BAP_yAxistMotor, &input);
 }
