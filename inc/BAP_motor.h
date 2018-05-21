@@ -55,6 +55,7 @@ void BAP_MotorModuleInit(void);
 void BAP_MotorInit(BAP_Motor_S* motor, BAP_MotorInit_S* input);
 
 BAP_RESULT_E BAP_MotorGetPosDegree(BAP_Motor_S* motor, float *ret_deg);
+BAP_RESULT_E BAP_MotorSetPIDOutputLimit(BAP_Motor_S* motor, float lower, float upper);
 BAP_RESULT_E BAP_MotorGetPIDPosOutput(BAP_Motor_S* motor, float *ret_PIDout);
 BAP_RESULT_E BAP_MotorChangeSpeedPWM(BAP_Motor_S* motor, int speed);
 BAP_RESULT_E BAP_MotorChangePosSetpoint(BAP_Motor_S* motor, float setpoint);

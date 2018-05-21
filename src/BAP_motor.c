@@ -96,6 +96,12 @@ BAP_RESULT_E BAP_MotorChangePWMPeriod(BAP_Motor_S* motor, BAP_MOTOR_DIR_E dir, i
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+BAP_RESULT_E BAP_MotorSetPIDOutputLimit(BAP_Motor_S* motor, float lower, float upper)
+{
+    PID_OutputLimit_Enable(&(motor->pid), lower, upper);
+    return BAP_SUCCESS;
+}
+
 BAP_RESULT_E BAP_MotorGetPIDPosOutput(BAP_Motor_S* motor, float* ret_PIDout)
 {
     if(motor == NULL || ret_PIDout == NULL)
@@ -116,18 +122,18 @@ BAP_RESULT_E BAP_MotorGetPosDegree(BAP_Motor_S* motor, float* ret_deg)
     }
 
     float deg = 0;
-    uint32_t pos = BAP_MotorGetPos(motor);
-    deg = (float)(pos - BAP_MOTOR_START_POS_D);
+    int pos = (int)BAP_MotorGetPos(motor);
+    deg = (float)(pos - (int)BAP_MOTOR_START_POS_D);
     *ret_deg = (deg/(float)BAP_ENCODER_PULSE_PER_ROUND_D)*360.0;
     return BAP_SUCCESS;
 }
 
 uint32_t BAP_MotorGetPos(BAP_Motor_S* motor)
 {
+#if 0
     uint32_t present = BAP_MotorReadEncoder(motor);
     uint32_t past = motor->encoder.past_counter;
     uint32_t enc_value = motor->encoder.value;
-
 
     if((past < 0x1000) && (present > 0xf000))
     {
@@ -144,6 +150,18 @@ uint32_t BAP_MotorGetPos(BAP_Motor_S* motor)
 
     motor->encoder.value = enc_value;
     return enc_value;
+#else
+    uint32_t enc = BAP_MotorReadEncoder(motor);
+    if(enc < BAP_MOTOR_START_POS_D)
+    {
+        enc += BAP_MOTOR_START_POS_D;
+    }
+    else
+    {
+        enc -= BAP_MOTOR_START_POS_D;
+    }
+    return enc;
+#endif
 }
 
 uint32_t BAP_MotorReadEncoder(BAP_Motor_S* motor)

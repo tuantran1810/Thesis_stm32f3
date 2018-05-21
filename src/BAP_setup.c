@@ -48,17 +48,19 @@ void BAP_SetupGPIO(void)
     gpio_set_af(GPIOC, GPIO_AF5, GPIO12);//PC12 = UART5_TX
     gpio_set_af(GPIOD, GPIO_AF5, GPIO2);//PD2 = UART5_RX
 
-    //GPIO for PWM => use timer 1 | PE9 = TIM1_CH1 (in 1 -> red wire motor) | PE11 = TIM1_CH2 (in 2 -> black wire motor) 
-    //                            | PE13 = TIM1_CH3 (in 3 -> black wire motor) | PE14 = TIM1_CH4 (in 4 -> red wire motor)
-    gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO13 | GPIO14);
-    gpio_set_af(GPIOE, GPIO_AF2, GPIO9 | GPIO11 | GPIO13 | GPIO14);
+    //GPIO for PWM => use timer 4 | PD12 = TIM4_CH1 (in 1 -> red wire motor) | PD13 = TIM4_CH2 (in 2 -> black wire motor) 
+    //                            | PD14 = TIM4_CH3 (in 3 -> red wire motor) | PD15 = TIM4_CH4 (in 4 -> black wire motor)
+    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO12 | GPIO13 | GPIO14 | GPIO15);
+    gpio_set_af(GPIOD, GPIO_AF2, GPIO12 | GPIO13 | GPIO14 | GPIO15);
 
-    //GPIO for TIM4 Encoder input for x axist PD12 = TIM4_CH1 (green wire)| PD13 = TIM4_CH2 (blue wire)
-    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO12 | GPIO13);
-    gpio_set_af(GPIOD, GPIO_AF2, GPIO12 | GPIO13);
+    //GPIO for TIM1 Encoder input for x axist PE9 = TIM1_CH1 (green wire)| PE11 = TIM1_CH2 (blue wire)
+    gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11);
+    gpio_set_output_options(GPIOE, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO9 | GPIO11);
+    gpio_set_af(GPIOE, GPIO_AF2, GPIO9 | GPIO11);
 
-    //GPIO for TIM8 Encoder input for y axist PC6 = TIM8_CH1 (blue wire)| PC7 = TIM8_CH2 (green wire)
+    //GPIO for TIM8 Encoder input for y axist PC6 = TIM8_CH1 (green wire)| PC7 = TIM8_CH2 (blue wire)
     gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+    gpio_set_output_options(GPIOC, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO6 | GPIO7);
     gpio_set_af(GPIOC, GPIO_AF4, GPIO6 | GPIO7);
 }
 

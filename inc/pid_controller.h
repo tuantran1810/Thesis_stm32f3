@@ -20,7 +20,7 @@ typedef struct PID_Controller{
     float uk_1;
     float ek_1;
     float ek_2;
-    bool with_limit;
+    int with_limit;
     float lower_limit;
     float upper_limit;
 }PID_Controller;
