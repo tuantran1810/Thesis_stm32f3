@@ -23,12 +23,14 @@ typedef struct BAP_SecondOrderDLF_S  //for discrete low pass filter type: 1/(as 
 {
     BAP_DiscreteFunction_S input;   //must have more than 2 minus samples
     BAP_DiscreteFunction_S output;   //must have more than 2 minus samples
-    float t_on_a2;
-    float exp_minus_t_on_a2;
+    float a;
+    float T;
+    float exp_aT;
 }BAP_SecondOrderLF_S;
 
 BAP_RESULT_E BAP_SMCSecondOrderLFInit(BAP_SecondOrderLF_S* lf, float dT, float a);
 BAP_RESULT_E BAP_SMCSecondOrderLFGetOutput(BAP_SecondOrderLF_S* lf, float* out);
+BAP_RESULT_E BAP_SMCSecondOrderLFAppendInput(BAP_SecondOrderLF_S* lf, float input);
 
 BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, float sat_lower, float k1, float K, float yd);
 BAP_RESULT_E BAP_SMCOuputCal(BAP_SMC_S* smc, float* out);
