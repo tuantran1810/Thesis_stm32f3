@@ -82,15 +82,22 @@ BAP_RESULT_E BAP_FuncDerivate(BAP_DiscreteFunction_S* func, int rate, float* out
 
 BAP_RESULT_E BAP_FuncGetSatOutput(BAP_SatFunction_S* sat, float input, float* out)
 {
-    float ret = 0;
     if(sat == NULL || out == NULL)
     {
         return BAP_FAILED_NULL_PTR;
     }
 
-    ret = (input > sat->upper_limit)? sat->upper_limit:input;
-    ret = (input < sat->lower_limit)? sat->lower_limit:input;
-    *out = ret;
+    if(input < sat->lower_limit)
+    {
+        *out = sat->lower_limit;
+        return BAP_SUCCESS;
+    }
+    else if(input > sat->upper_limit)
+    {
+        *out = sat->upper_limit;
+        return BAP_SUCCESS;
+    }
+    *out = input;
 
     return BAP_SUCCESS;
 }

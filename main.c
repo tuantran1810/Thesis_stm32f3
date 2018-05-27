@@ -27,7 +27,9 @@
 #include "BAP_motor.h"
 
 SemaphoreHandle_t CMDUART_Send_Se;
+SemaphoreHandle_t DEBUGUART_Send_Se;
 SemaphoreHandle_t CMDUART_Recv_Se;
+SemaphoreHandle_t DEBUGUART_Recv_Se;
 TaskSharedVars_S SharedVars;
 
 int main(void)
@@ -37,14 +39,15 @@ int main(void)
     BAP_MotorModuleInit();
     BAP_TaskModuleInit();
 
-    BAP_LOG_DEBUG("System Start!!!");
+    BAP_LOG_DEBUG("System Start!!!\n\r");
 
     memset(&SharedVars, 0, sizeof(TaskSharedVars_S));
 
-    xTaskCreate(BAP_TaskRecvCmd, "USART2 Recv Command Handler", 300, (void*)&SharedVars, 2, NULL);
-    xTaskCreate(BAP_TaskPlateControl, "BAP_TaskPlateControl", 500, (void*)&SharedVars, 2, NULL);
-    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", 300, (void*)&SharedVars, 1, NULL);
-    // xTaskCreate(BAP_TaskTesting, "BAP_TaskTesting", 500, (void*)&SharedVars, 1, NULL);
+    xTaskCreate(BAP_TaskRecvCmd, "BAP_TaskRecvCmd", 300, (void*)&SharedVars, 3, NULL);
+    xTaskCreate(BAP_TaskPlateControl, "BAP_TaskPlateControl", 500, (void*)&SharedVars, 3, NULL);
+    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", 300, (void*)&SharedVars, 2, NULL);
+    xTaskCreate(BAP_TaskCommunicate, "BAP_TaskCommunicate", 300, (void*)&SharedVars, 1, NULL);
+    xTaskCreate(BAP_TaskTrajectoryControl, "BAP_TaskTrajectoryControl", 300, (void*)&SharedVars, 1, NULL);
     vTaskStartScheduler();
 
     while(1);

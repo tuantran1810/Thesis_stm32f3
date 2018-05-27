@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
@@ -21,44 +22,15 @@
 #include "BAP_SMC.h"
 #include "pid_controller.h"
 
-#define BAP_INPUT_LPF_COEFFICIENT   0.05    //LPF(s) = 1/(as + 1)^2
-
-const float sin_sig[150] = 
-    {
-   -0.0000,   -0.8431,   -1.6848,   -2.5234,   -3.3575,   -4.1857,   -5.0065,   -5.8183,   -6.6198,   -7.4095,   -8.1861,   -8.9481,
-   -9.6941,  -10.4230,  -11.1333,  -11.8238,  -12.4933,  -13.1406,  -13.7645,  -14.3640,  -14.9379,  -15.4853,  -16.0051,  -16.4964,
-  -16.9585,  -17.3904,  -17.7913,  -18.1607,  -18.4977,  -18.8019,  -19.0726,  -19.3094,  -19.5119,  -19.6797,  -19.8125,  -19.9100,
-  -19.9722,  -19.9989,  -19.9900,  -19.9456,  -19.8657,  -19.7505,  -19.6001,  -19.4149,  -19.1953,  -18.9414,  -18.6539,  -18.3333,
-  -17.9800,  -17.5948,  -17.1782,  -16.7312,  -16.2544,  -15.7487,  -15.2150,  -14.6542,  -14.0674,  -13.4556,  -12.8198,  -12.1613,
-  -11.4811,  -10.7805,  -10.0608,   -9.3232,   -8.5690,   -7.7995,   -7.0162,   -6.2204,   -5.4136,   -4.5971,   -3.7725,   -2.9411,
-   -2.1045,   -1.2642,   -0.4217,    0.4217,    1.2642,    2.1045,    2.9411,    3.7725,    4.5971,    5.4136,    6.2204,    7.0162,
-    7.7995,    8.5690,    9.3232,   10.0608,   10.7805,   11.4811,   12.1613,   12.8198,   13.4556,   14.0674,   14.6542,   15.2150,
-   15.7487,   16.2544,   16.7312,   17.1782,   17.5948,   17.9800,   18.3333,   18.6539,   18.9414,   19.1953,   19.4149,   19.6001,
-   19.7505,   19.8657,   19.9456,   19.9900,   19.9989,   19.9722,   19.9100,   19.8125,   19.6797,   19.5119,   19.3094,   19.0726,
-   18.8019,   18.4977,   18.1607,   17.7913,   17.3904,   16.9585,   16.4964,   16.0051,   15.4853,   14.9379,   14.3640,   13.7645,
-   13.1406,   12.4933,   11.8238,   11.1333,   10.4230,    9.6941,    8.9481,    8.1861,    7.4095,    6.6198,    5.8183,    5.0065,
-    4.1857,    3.3575,    2.5234,    1.6848,    0.8431,    0.0000
-    };
-
-const float cos_sig[150] =
-    {
-  -20.0000,  -19.9822,  -19.9289,  -19.8402,  -19.7162,  -19.5571,  -19.3632,  -19.1350,  -18.8727,  -18.5768,  -18.2480,  -17.8866,
-  -17.4935,  -17.0693,  -16.6147,  -16.1306,  -15.6178,  -15.0773,  -14.5099,  -13.9167,  -13.2988,  -12.6573,  -11.9932,  -11.3078,
-  -10.6024,   -9.8780,   -9.1361,   -8.3780,   -7.6049,   -6.8184,   -6.0197,   -5.2103,   -4.3917,   -3.5652,   -2.7324,   -1.8948,
-   -1.0537,   -0.2108,    0.6324,    1.4746,    2.3141,    3.1495,    3.9793,    4.8021,    5.6163,    6.4205,    7.2133,    7.9932,
-    8.7590,    9.5092,   10.2425,   10.9575,   11.6531,   12.3280,   12.9809,   13.6108,   14.2165,   14.7969,   15.3510,   15.8778,
-   16.3763,   16.8458,   17.2853,   17.6940,   18.0713,   18.4165,   18.7289,   19.0081,   19.2534,   19.4645,   19.6410,   19.7826,
-   19.8890,   19.9600,   19.9956,   19.9956,   19.9600,   19.8890,   19.7826,   19.6410,   19.4645,   19.2534,   19.0081,   18.7289,
-   18.4165,   18.0713,   17.6940,   17.2853,   16.8458,   16.3763,   15.8778,   15.3510,   14.7969,   14.2165,   13.6108,   12.9809,
-   12.3280,   11.6531,   10.9575,   10.2425,    9.5092,    8.7590,    7.9932,    7.2133,    6.4205,    5.6163,    4.8021,    3.9793,
-    3.1495,    2.3141,    1.4746,    0.6324,   -0.2108,   -1.0537,   -1.8948,   -2.7324,   -3.5652,   -4.3917,   -5.2103,   -6.0197,
-   -6.8184,   -7.6049,   -8.3780,   -9.1361,   -9.8780,  -10.6024,  -11.3078,  -11.9932,  -12.6573,  -13.2988,  -13.9167,  -14.5099,
-  -15.0773,  -15.6178,  -16.1306,  -16.6147,  -17.0693,  -17.4935,  -17.8866,  -18.2480,  -18.5768,  -18.8727,  -19.1350,  -19.3632,
-  -19.5571,  -19.7162,  -19.8402,  -19.9289,  -19.9822,  -20.0000
-    };
+#define BAP_INPUT_LPF_COEFFICIENT       0.05    //LPF(s) = 1/(as + 1)^2
+#define BAP_PLATE_OUTPUT_LIMIT_ANGLE    12
+#define BAP_PLATE_PIXEL                 320.0
+#define BAP_PLATE_WIDTH                 0.26
+#define BAP_PI                          3.14159
 
 SemaphoreHandle_t InterSharedVar_RecvPos_Se;
 SemaphoreHandle_t InterSharedVars_Se;
+SemaphoreHandle_t InterController_Se;
 
 BAP_Motor_S BAP_xAxistMotor;
 BAP_Motor_S BAP_yAxistMotor;
@@ -69,25 +41,30 @@ BAP_SecondOrderLF_S BAP_yAxistLPF;
 BAP_SMC_S BAP_xAxistSMC;
 BAP_SMC_S BAP_yAxistSMC;
 
-PID_Controller tmp_x;
-PID_Controller tmp_y;
+PID_Controller BAP_xAxistPID;
+PID_Controller BAP_yAxistPID;
 
 void BAP_TaskMotorConfig(void);
+void BAP_TaskPlateConfigPID(void);
+void BAP_TaskPlateConfigSMC(void);
+float BAP_TaskPixel2M(float pixel);
+float BAP_TaskRad2Deg(float rad);
+float BAP_TaskDeg2Rad(float deg);
 
 void BAP_TaskModuleInit(void)
 {
-    // BAP_SemCreateBin(InterSharedVars_Se);
-    InterSharedVars_Se = xSemaphoreCreateMutex();
+    BAP_SemCreateBin(InterSharedVars_Se);
     BAP_SemGive(InterSharedVars_Se);
     BAP_SemCreateBin(InterSharedVar_RecvPos_Se);
+    BAP_SemCreateBin(InterController_Se);
+    BAP_SemGive(InterController_Se);
     BAP_TaskMotorConfig();
-    BAP_SMCSecondOrderLFInit(&BAP_xAxistLPF, BAP_DISCRETE_TIME_INTERVAL, BAP_INPUT_LPF_COEFFICIENT);
-    BAP_SMCSecondOrderLFInit(&BAP_yAxistLPF, BAP_DISCRETE_TIME_INTERVAL, BAP_INPUT_LPF_COEFFICIENT);
-    BAP_SMCInit(&BAP_xAxistSMC, 2, BAP_DISCRETE_TIME_INTERVAL, 1, -1, 2.5, 10, 0);
-    BAP_SMCInit(&BAP_yAxistSMC, 2, BAP_DISCRETE_TIME_INTERVAL, 1, -1, 2.5, 10, 0);
+    BAP_TaskPlateConfigPID();
+    BAP_TaskPlateConfigSMC();
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//UART recving task - receive from RPi
 void BAP_TaskRecvCmd(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
@@ -149,18 +126,6 @@ void BAP_TaskRecvCmd(void* p)
                     BAP_SemGive(InterSharedVars_Se);
                     BAP_SemGive(InterSharedVar_RecvPos_Se);
                 }
-                else if(memcmp(&CMDUART_Recv_Buffer_Read[strlen(BAP_CMDMESS_STR_D)], BAP_CTRL_STR_D, strlen(BAP_CTRL_STR_D)) == 0)
-                {
-                    //TODO
-                }
-                else if(memcmp(&CMDUART_Recv_Buffer_Read[strlen(BAP_CMDMESS_STR_D)], BAP_SETPOINT_STR_D, strlen(BAP_SETPOINT_STR_D)) == 0)
-                {
-                    //TODO
-                }
-                else
-                {
-
-                }
             }
         }
         BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Read);
@@ -171,6 +136,7 @@ void BAP_TaskRecvCmd(void* p)
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//Plate controlling task
 void BAP_TaskPlateControl(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
@@ -178,7 +144,7 @@ void BAP_TaskPlateControl(void* p)
     int y = 0;
     float x_out = 0;
     float y_out = 0;
-    int count = 0;
+    BAP_PLATE_CONTROLLER_E controller = BAP_PLATE_CONTROLLER_PID;
     while(1)
     {
         if(BAP_SemTakeMax(InterSharedVar_RecvPos_Se) == pdPASS)
@@ -186,22 +152,34 @@ void BAP_TaskPlateControl(void* p)
             BAP_SemTakeMax(InterSharedVars_Se);
             x = pSharedVars->RecvPos.x;
             y = pSharedVars->RecvPos.y;
+            controller = pSharedVars->RecvPos.controller;
             BAP_SemGive(InterSharedVars_Se);
 
-            // BAP_FuncSampleAppend(&(BAP_xAxistLPF.input), (float)x);
-            // BAP_FuncSampleAppend(&(BAP_yAxistLPF.input), (float)y);
+            BAP_SemTakeMax(InterController_Se);
+            if(controller == BAP_PLATE_CONTROLLER_PID)
+            {
+                x_out = PID_Get_Output(&BAP_xAxistPID, x);
+                y_out = PID_Get_Output(&BAP_yAxistPID, y);
+            }
+            else
+            {
+                // BAP_FuncSampleAppend(&(BAP_xAxistLPF.input), (float)x);
+                // BAP_FuncSampleAppend(&(BAP_yAxistLPF.input), (float)y);
 
-            // BAP_SMCSecondOrderLFGetOutput(&BAP_xAxistLPF, &x_out);
-            // BAP_SMCSecondOrderLFGetOutput(&BAP_yAxistLPF, &y_out);
+                // BAP_SMCSecondOrderLFGetOutput(&BAP_xAxistLPF, &x_out);
+                // BAP_SMCSecondOrderLFGetOutput(&BAP_yAxistLPF, &y_out);
 
-            // BAP_SMCUpdateParam(&BAP_xAxistSMC, x_out);
-            // BAP_SMCUpdateParam(&BAP_yAxistSMC, y_out);
+                // BAP_SMCUpdateParam(&BAP_xAxistSMC, x_out);
+                // BAP_SMCUpdateParam(&BAP_yAxistSMC, y_out);
+                BAP_SMCUpdateParam(&BAP_xAxistSMC, BAP_TaskPixel2M(x));
+                BAP_SMCUpdateParam(&BAP_yAxistSMC, BAP_TaskPixel2M(y));
 
-            // BAP_SMCOuputCal(&BAP_xAxistSMC, &x_out); //setpoint angle for xAxist motor
-            // BAP_SMCOuputCal(&BAP_yAxistSMC, &y_out); //setpoint angle for yAxist motor
-
-            x_out = PID_Get_Output(&tmp_x, x);
-            y_out = PID_Get_Output(&tmp_y, y);
+                BAP_SMCOuputCal(&BAP_xAxistSMC, &x_out); //setpoint angle for xAxist motor
+                BAP_SMCOuputCal(&BAP_yAxistSMC, &y_out); //setpoint angle for yAxist motor
+                x_out = BAP_TaskRad2Deg(x_out);
+                y_out = BAP_TaskRad2Deg(y_out);
+            }
+            BAP_SemGive(InterController_Se);
 
             BAP_SemTakeMax(InterSharedVars_Se);
             pSharedVars->MotorPos.x = x_out;
@@ -212,6 +190,7 @@ void BAP_TaskPlateControl(void* p)
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//Motor controlling task
 void BAP_TaskMotorControl(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
@@ -220,7 +199,6 @@ void BAP_TaskMotorControl(void* p)
     float x_out = 0;
     float y_out = 0;
     float tmpx = 0, tmpy = 0;
-    char str[50] = {0};
     while(1)
     {
         BAP_SemTakeMax(InterSharedVars_Se);
@@ -239,45 +217,294 @@ void BAP_TaskMotorControl(void* p)
 
         BAP_MotorGetPosDegree(&BAP_xAxistMotor, &tmpx);
         BAP_MotorGetPosDegree(&BAP_yAxistMotor, &tmpy);
-        sprintf(str, "x, y = %f, %f, %f, %f\n\r", x, tmpx, y, tmpy);
-        BAP_LOG_DEBUG(str);
         vTaskDelay(4);
     }
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-void BAP_TaskTesting(void* p)
+void BAP_TaskCommunicate(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
-    float x_out = 0;
-    float y_out = 0;
-    float x_deg = 0;
-    float y_deg = 0;
-    char str[100];
-    int count = 0;
-    vTaskDelay(1000);
+
+    char CMDUART_Recv_Buffer1[BAP_MAX_UART_MESSAGE_LENGTH_D];
+    char CMDUART_Recv_Buffer2[BAP_MAX_UART_MESSAGE_LENGTH_D];
+    char* CMDUART_Recv_Buffer_Write = CMDUART_Recv_Buffer1;
+    char* CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer2;
+    
+    char f_num = 0;
+    char f_dec[4] = {0};
+    char ui_num[3] = {0};
+    char length_ch[2] = {0};
+
+    float recv_PID_Kp = 0, recv_PID_Ki = 0, recv_PID_Kd = 0;
+    float recv_SMC_k1 = 0, recv_SMC_K = 0;
+    unsigned int tmp1 = 0, tmp2 = 0, tmp3 = 0, tmp4 = 0;
+    unsigned int length = 0;
+
+    BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Write);
+    BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Read);
+
+    BAP_UARTRecvDMA(BAP_UART_DEBUG_CH_D, CMDUART_Recv_Buffer_Write, BAP_MAX_UART_MESSAGE_LENGTH_D);
+
     while(1)
     {
-        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &x_deg);
-        BAP_MotorGetPosDegree(&BAP_yAxistMotor, &y_deg);
-        BAP_MotorChangePosSetpoint(&BAP_xAxistMotor, sin_sig[count]);
-        BAP_MotorChangePosSetpoint(&BAP_yAxistMotor, cos_sig[count]);
-
-        BAP_MotorGetPIDPosOutput(&BAP_xAxistMotor, &x_out); //PWM signal
-        BAP_MotorGetPIDPosOutput(&BAP_yAxistMotor, &y_out); //PWM signal
-
-        BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)x_out);
-        BAP_MotorChangeSpeedPWM(&BAP_yAxistMotor, (int)y_out);
-        count++;
-        if (count == 151)
+        length = 0;
+        if(BAP_SemTakeMax(DEBUGUART_Recv_Se) == pdPASS)
         {
-            count = 0;
+            if(CMDUART_Recv_Buffer1 == CMDUART_Recv_Buffer_Write)
+            {
+                CMDUART_Recv_Buffer_Write = CMDUART_Recv_Buffer2;
+                CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer1;                
+            }            
+            else
+            {
+                CMDUART_Recv_Buffer_Write = CMDUART_Recv_Buffer1;
+                CMDUART_Recv_Buffer_Read = CMDUART_Recv_Buffer2;                
+            }
+            BAP_UARTRecvDMA(BAP_UART_DEBUG_CH_D, CMDUART_Recv_Buffer_Write, BAP_MAX_UART_MESSAGE_LENGTH_D);
+            memcpy(length_ch, &CMDUART_Recv_Buffer_Read[1], 2); //Number with 2 digits
+            length = atoi(length_ch);
+            BAP_LOG_DEBUG(CMDUART_Recv_Buffer_Read);
+
+            if (length <= BAP_MAX_UART_MESSAGE_LENGTH_D && length > 12)
+            {
+                if(memcmp(&CMDUART_Recv_Buffer_Read[5], BAP_CTRL_STR_D, strlen(BAP_CTRL_STR_D)) == 0)
+                {
+                    if(memcmp(&CMDUART_Recv_Buffer_Read[11], BAP_PID_STR_D, strlen(BAP_PID_STR_D)) == 0)
+                    {
+                        if(CMDUART_Recv_Buffer_Read[17] == '.' && CMDUART_Recv_Buffer_Read[24] == '.' && CMDUART_Recv_Buffer_Read[31] == '.')
+                        {
+                            f_num = CMDUART_Recv_Buffer_Read[16];
+                            memcpy(f_dec, &CMDUART_Recv_Buffer_Read[18], 4);
+                            recv_PID_Kp = (float)(f_num - 48) + (float)(atoi(f_dec))/10000.0;
+
+                            f_num = CMDUART_Recv_Buffer_Read[23];
+                            memcpy(f_dec, &CMDUART_Recv_Buffer_Read[25], 4);
+                            recv_PID_Ki = (float)(f_num - 48) + (float)(atoi(f_dec))/10000.0;
+
+                            f_num = CMDUART_Recv_Buffer_Read[30];
+                            memcpy(f_dec, &CMDUART_Recv_Buffer_Read[32], 4);
+                            recv_PID_Kd = (float)(f_num - 48) + (float)(atoi(f_dec))/10000.0;
+
+                            BAP_SemTakeMax(InterController_Se);
+                            PID_Update(&BAP_xAxistPID, recv_PID_Kp, recv_PID_Ki, recv_PID_Kd, BAP_DISCRETE_TIME_INTERVAL, -1);
+                            PID_Update(&BAP_yAxistPID, recv_PID_Kp, recv_PID_Ki, recv_PID_Kd, BAP_DISCRETE_TIME_INTERVAL, 1);
+                            BAP_SemGive(InterController_Se);
+
+                            BAP_SemTakeMax(InterSharedVars_Se);
+                            pSharedVars->RecvPos.controller = BAP_PLATE_CONTROLLER_PID;
+                            BAP_SemGive(InterSharedVars_Se);
+                        }
+                    }
+                    else if(memcmp(&CMDUART_Recv_Buffer_Read[11], BAP_SMC_STR_D, strlen(BAP_SMC_STR_D)) == 0)
+                    {
+                        if(CMDUART_Recv_Buffer_Read[17] == '.' && CMDUART_Recv_Buffer_Read[24] == '.')
+                        {
+                            f_num = CMDUART_Recv_Buffer_Read[16];
+                            memcpy(f_dec, &CMDUART_Recv_Buffer_Read[18], 4);
+                            recv_SMC_k1 = (float)(f_num - 48) + (float)(atoi(f_dec))/10000.0;
+
+                            f_num = CMDUART_Recv_Buffer_Read[23];
+                            memcpy(f_dec, &CMDUART_Recv_Buffer_Read[25], 4);
+                            recv_SMC_K = (float)(f_num - 48) + (float)(atoi(f_dec))/10000.0;
+
+                            BAP_SemTakeMax(InterController_Se);
+                            BAP_SMCUpdate(&BAP_xAxistSMC, recv_SMC_k1, recv_SMC_K);
+                            BAP_SMCUpdate(&BAP_yAxistSMC, recv_SMC_K, recv_SMC_K);
+                            BAP_SemGive(InterController_Se);
+
+                            BAP_SemTakeMax(InterSharedVars_Se);
+                            pSharedVars->RecvPos.controller = BAP_PLATE_CONTROLLER_SMC;
+                            BAP_SemGive(InterSharedVars_Se);
+                        }
+                    }
+                }
+                else if(memcmp(&CMDUART_Recv_Buffer_Read[5], BAP_MODE_STR_D, strlen(BAP_MODE_STR_D)) == 0)
+                {
+                    if(memcmp(&CMDUART_Recv_Buffer_Read[11], BAP_CIR_STR_D, strlen(BAP_CIR_STR_D)) == 0)
+                    {
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[16], 3);
+                        tmp1 = atoi(ui_num);
+
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[20], 3);
+                        tmp2 = atoi(ui_num);
+
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[24], 3);
+                        tmp3 = atoi(ui_num);
+
+                        BAP_SemTakeMax(InterSharedVars_Se);
+                        pSharedVars->Trajectory.mode = BAP_PLATE_MODE_CIRCLE;
+                        pSharedVars->Trajectory.circle.x = tmp2;
+                        pSharedVars->Trajectory.circle.y = tmp3;
+                        pSharedVars->Trajectory.circle.R = tmp1;
+                        BAP_SemGive(InterSharedVars_Se);
+                    }
+                    else if(memcmp(&CMDUART_Recv_Buffer_Read[11], BAP_REC_STR_D, strlen(BAP_REC_STR_D)) == 0)
+                    {
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[16], 3);
+                        tmp1 = atoi(ui_num);
+
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[20], 3);
+                        tmp2 = atoi(ui_num);
+
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[24], 3);
+                        tmp3 = atoi(ui_num);
+
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[28], 3);
+                        tmp4 = atoi(ui_num);
+
+                        BAP_SemTakeMax(InterSharedVars_Se);
+                        pSharedVars->Trajectory.mode = BAP_PLATE_MODE_RECTANGLE;
+                        pSharedVars->Trajectory.rectangle.topleft_x = tmp1;
+                        pSharedVars->Trajectory.rectangle.topleft_y = tmp2;
+                        pSharedVars->Trajectory.rectangle.botright_x = tmp3;
+                        pSharedVars->Trajectory.rectangle.botright_y = tmp4;
+                        BAP_SemGive(InterSharedVars_Se);
+                    }
+                    else if(memcmp(&CMDUART_Recv_Buffer_Read[11], BAP_FSE_STR_D, strlen(BAP_FSE_STR_D)) == 0)
+                    {
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[16], 3);
+                        tmp1 = atoi(ui_num);
+
+                        memcpy(ui_num, &CMDUART_Recv_Buffer_Read[20], 3);
+                        tmp2 = atoi(ui_num);
+
+                        BAP_SemTakeMax(InterSharedVars_Se);
+                        pSharedVars->Trajectory.mode = BAP_PLATE_MODE_FREESET;
+                        pSharedVars->Trajectory.freeset.x = tmp1;
+                        pSharedVars->Trajectory.freeset.y = tmp2;
+                        BAP_SemGive(InterSharedVars_Se);
+                    }
+                }
+            }
         }
-        vTaskDelay(20);
+        BAP_CLEAN_BUFFER(CMDUART_Recv_Buffer_Read);
+        BAP_CLEAN_BUFFER(length_ch);
     }
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+void BAP_TaskTrajectoryControl(void* p)
+{
+    TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
+    TaskSharedVars_Trajectory_S traj;
+
+    BAP_PLATE_MODE_E pre_mode = BAP_PLATE_MODE_FREESET;
+    unsigned int count = 0;
+    float circle_x = 0, circle_y = 0;
+
+    BAP_SemTakeMax(InterController_Se);
+    PID_Update_Setpoint(&BAP_xAxistPID, 160);
+    PID_Update_Setpoint(&BAP_yAxistPID, 160);
+    BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M(160));
+    BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M(160));
+    BAP_SemGive(InterController_Se);
+
+    BAP_SemTakeMax(InterSharedVars_Se);
+    pSharedVars->Trajectory.mode = BAP_PLATE_MODE_FREESET;
+    pSharedVars->Trajectory.freeset.x = 160;
+    pSharedVars->Trajectory.freeset.y = 160;
+    BAP_SemGive(InterSharedVars_Se);
+
+    while(1)
+    {
+        BAP_SemTakeMax(InterSharedVars_Se);
+        memcpy(&traj, &(pSharedVars->Trajectory), sizeof(TaskSharedVars_Trajectory_S));
+        BAP_SemGive(InterSharedVars_Se);
+
+        if(traj.mode == BAP_PLATE_MODE_CIRCLE)
+        {
+            if(pre_mode != BAP_PLATE_MODE_CIRCLE)
+            {
+                count = 0;
+                pre_mode = BAP_PLATE_MODE_CIRCLE;
+            }
+
+            circle_x = (float)traj.circle.x + (float)traj.circle.R*cos(BAP_TaskDeg2Rad(count/360));
+            circle_y = (float)traj.circle.y + (float)traj.circle.R*sin(BAP_TaskDeg2Rad(count/360));
+
+            BAP_SemTakeMax(InterController_Se);
+            PID_Update_Setpoint(&BAP_xAxistPID, (unsigned int)circle_x);
+            PID_Update_Setpoint(&BAP_yAxistPID, (unsigned int)circle_y);
+            BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M((unsigned int)circle_x));
+            BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M((unsigned int)circle_y));
+            BAP_SemGive(InterController_Se);
+
+            count++;
+            if(count == 720)
+            {
+                count = 0;
+            }
+        }
+        else if(traj.mode == BAP_PLATE_MODE_RECTANGLE)
+        {
+            if(pre_mode != BAP_PLATE_MODE_RECTANGLE)
+            {
+                count = 0;
+                pre_mode = BAP_PLATE_MODE_RECTANGLE;
+            }
+
+            if(count == 0)
+            {
+                BAP_SemTakeMax(InterController_Se);
+                PID_Update_Setpoint(&BAP_xAxistPID, traj.rectangle.topleft_x);
+                PID_Update_Setpoint(&BAP_yAxistPID, traj.rectangle.topleft_y);
+                BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M(traj.rectangle.topleft_x));
+                BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M(traj.rectangle.topleft_y));
+                BAP_SemGive(InterController_Se);
+            }
+
+            if(count == 500)
+            {
+                BAP_SemTakeMax(InterController_Se);
+                PID_Update_Setpoint(&BAP_xAxistPID, traj.rectangle.botright_x);
+                PID_Update_Setpoint(&BAP_yAxistPID, traj.rectangle.topleft_y);
+                BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M(traj.rectangle.botright_x));
+                BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M(traj.rectangle.topleft_y));
+                BAP_SemGive(InterController_Se);
+            }
+
+            if(count == 1000)
+            {
+                BAP_SemTakeMax(InterController_Se);
+                PID_Update_Setpoint(&BAP_xAxistPID, traj.rectangle.botright_x);
+                PID_Update_Setpoint(&BAP_yAxistPID, traj.rectangle.botright_y);
+                BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M(traj.rectangle.botright_x));
+                BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M(traj.rectangle.botright_y));
+                BAP_SemGive(InterController_Se);
+            }
+
+            if(count == 1500)
+            {
+                BAP_SemTakeMax(InterController_Se);
+                PID_Update_Setpoint(&BAP_xAxistPID, traj.rectangle.topleft_x);
+                PID_Update_Setpoint(&BAP_yAxistPID, traj.rectangle.botright_y);
+                BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M(traj.rectangle.topleft_x));
+                BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M(traj.rectangle.botright_y));
+                BAP_SemGive(InterController_Se);
+            }
+
+            count++;
+            if(count == 2000)
+            {
+                count = 0;
+            }
+        }
+        else if(traj.mode == BAP_PLATE_MODE_FREESET)
+        {
+            BAP_SemTakeMax(InterController_Se);
+            PID_Update_Setpoint(&BAP_xAxistPID, traj.freeset.x);
+            PID_Update_Setpoint(&BAP_yAxistPID, traj.freeset.y);
+            BAP_SMCChangeSetPoint(&BAP_xAxistSMC, BAP_TaskPixel2M(traj.freeset.x));
+            BAP_SMCChangeSetPoint(&BAP_yAxistSMC, BAP_TaskPixel2M(traj.freeset.y));
+            BAP_SemGive(InterController_Se);
+            pre_mode = BAP_PLATE_MODE_FREESET;
+        }
+        vTaskDelay(4);
+    }
+}
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// Ultility functions
 void BAP_TaskMotorConfig(void)
 {
     memset(&BAP_xAxistMotor, 0, sizeof(BAP_xAxistMotor));
@@ -287,9 +514,6 @@ void BAP_TaskMotorConfig(void)
 
     //for xAxist motor
     //using Ziegler–Nichols method with Ku = 70, Tu = 120ms, Kp = 0.6Ku, Ki = 1.2Ku/Tu, Kp = 0.075*Ku*Tu
-    // input.KP = 18; 
-    // input.KI = 0.06;
-    // input.KD = 0.04;
     input.KP = 14; 
     input.KI = 0.06;
     input.KD = 0.04;
@@ -319,12 +543,47 @@ void BAP_TaskMotorConfig(void)
     BAP_MotorInit(&BAP_yAxistMotor, &input);
     BAP_MotorSetPIDOutputLimit(&BAP_yAxistMotor, -400.0, 400.0);
     BAP_MotorChangeSpeedPWM(&BAP_yAxistMotor, 0);
+}
 
-    memset(&tmp_x, 0, sizeof(PID_Controller));
-    memset(&tmp_y, 0, sizeof(PID_Controller));
+void BAP_TaskPlateConfigPID(void)
+{
+    memset(&BAP_xAxistPID, 0, sizeof(PID_Controller));
+    memset(&BAP_yAxistPID, 0, sizeof(PID_Controller));
 
-    PID_Init(&tmp_x, 0.04, 0, 0.03, 0.02, -1, 200);
-    PID_Init(&tmp_y, 0.04, 0, 0.03, 0.02, 1, 200);
-    PID_OutputLimit_Enable(&tmp_x, -10, 10);  
-    PID_OutputLimit_Enable(&tmp_y, -10, 10);  
+    PID_Init(&BAP_xAxistPID, 0.05, 0, 0.03, BAP_DISCRETE_TIME_INTERVAL, -1, 160);
+    PID_Init(&BAP_yAxistPID, 0.05, 0, 0.03, BAP_DISCRETE_TIME_INTERVAL, 1, 160);
+    PID_OutputLimit_Enable(&BAP_xAxistPID, -BAP_PLATE_OUTPUT_LIMIT_ANGLE, BAP_PLATE_OUTPUT_LIMIT_ANGLE);  
+    PID_OutputLimit_Enable(&BAP_yAxistPID, -BAP_PLATE_OUTPUT_LIMIT_ANGLE, BAP_PLATE_OUTPUT_LIMIT_ANGLE);  
+}
+
+void BAP_TaskPlateConfigSMC(void)
+{
+    memset(&BAP_xAxistSMC, 0, sizeof(BAP_SMC_S));
+    memset(&BAP_yAxistSMC, 0, sizeof(BAP_SMC_S));
+    memset(&BAP_xAxistLPF, 0, sizeof(BAP_SecondOrderLF_S));
+    memset(&BAP_yAxistLPF, 0, sizeof(BAP_SecondOrderLF_S));
+
+    BAP_SMCSecondOrderLFInit(&BAP_xAxistLPF, BAP_DISCRETE_TIME_INTERVAL, BAP_INPUT_LPF_COEFFICIENT);
+    BAP_SMCSecondOrderLFInit(&BAP_yAxistLPF, BAP_DISCRETE_TIME_INTERVAL, BAP_INPUT_LPF_COEFFICIENT);
+
+    BAP_SMCInit(&BAP_xAxistSMC, 2, BAP_DISCRETE_TIME_INTERVAL, 10, -10, 2.5, 3, 0, -1);
+    BAP_SMCInit(&BAP_yAxistSMC, 2, BAP_DISCRETE_TIME_INTERVAL, 10, -10, 2.5, 3, 0, 1);
+
+    BAP_SMCOutputLimitEnable(&BAP_xAxistSMC, -BAP_TaskDeg2Rad(BAP_PLATE_OUTPUT_LIMIT_ANGLE), BAP_TaskDeg2Rad(BAP_PLATE_OUTPUT_LIMIT_ANGLE));
+    BAP_SMCOutputLimitEnable(&BAP_yAxistSMC, -BAP_TaskDeg2Rad(BAP_PLATE_OUTPUT_LIMIT_ANGLE), BAP_TaskDeg2Rad(BAP_PLATE_OUTPUT_LIMIT_ANGLE));
+}
+
+float BAP_TaskPixel2M(float pixel)
+{
+    return (pixel/BAP_PLATE_PIXEL)*BAP_PLATE_WIDTH;
+}
+
+float BAP_TaskRad2Deg(float rad)
+{
+    return (rad/BAP_PI)*180.0;
+}
+
+float BAP_TaskDeg2Rad(float deg)
+{
+    return (deg/180.0)*BAP_PI;
 }

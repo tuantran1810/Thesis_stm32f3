@@ -42,6 +42,11 @@ bool PID_Init(PID_Controller* PID, float KP, float KI, float KD, float dT, float
 
 bool PID_OutputLimit_Enable(PID_Controller* PID, float lower, float upper)
 {
+    if (lower > upper)
+    {
+        return false;
+    }
+    
     PID->lower_limit = lower;
     PID->upper_limit = upper;
     PID->with_limit = 1;

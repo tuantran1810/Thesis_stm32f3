@@ -165,7 +165,7 @@ BAP_RESULT_E BAP_UARTSendDMA(uint32_t uart, char *data, int size)
 
 void dma1_channel7_isr(void)
 {
-    if ((DMA1_ISR &DMA_ISR_TCIF7) != 0) 
+    if ((DMA1_ISR & DMA_ISR_TCIF7) != 0) 
     {
         DMA1_IFCR |= DMA_IFCR_CTCIF7;
     }
@@ -178,6 +178,27 @@ void dma1_channel7_isr(void)
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(CMDUART_Send_Se, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken == pdTRUE)
+    {
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+}
+
+void dma1_channel2_isr(void)
+{
+    if ((DMA1_ISR & DMA_ISR_TCIF2) != 0) 
+    {
+        DMA1_IFCR |= DMA_IFCR_CTCIF2;
+    }
+
+    dma_disable_transfer_complete_interrupt(DMA1, DMA_CHANNEL2);
+
+    usart_disable_tx_dma(USART3);
+
+    dma_disable_channel(DMA1, DMA_CHANNEL2);
+
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(DEBUGUART_Send_Se, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken == pdTRUE)
     {
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -244,8 +265,10 @@ BAP_RESULT_E BAP_UARTRecvDMA(uint32_t uart, char *data, int size)
 
 void dma1_channel6_isr(void)
 {
-    if ((DMA1_ISR &DMA_ISR_TCIF6) != 0)
+    if ((DMA1_ISR & DMA_ISR_TCIF6) != 0)
+    {
         DMA1_IFCR |= DMA_IFCR_CTCIF6;
+    }
     
     dma_disable_transfer_complete_interrupt(DMA1, DMA_CHANNEL6);
 
@@ -254,6 +277,26 @@ void dma1_channel6_isr(void)
     dma_disable_channel(DMA1, DMA_CHANNEL6);
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(CMDUART_Recv_Se, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken == pdTRUE)
+    {
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+}
+
+void dma1_channel3_isr(void)
+{
+    if ((DMA1_ISR & DMA_ISR_TCIF3) != 0)
+    {
+        DMA1_IFCR |= DMA_IFCR_CTCIF3;
+    }
+    
+    dma_disable_transfer_complete_interrupt(DMA1, DMA_CHANNEL3);
+
+    usart_disable_rx_dma(USART3);
+
+    dma_disable_channel(DMA1, DMA_CHANNEL3);
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(DEBUGUART_Recv_Se, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken == pdTRUE)
     {
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);

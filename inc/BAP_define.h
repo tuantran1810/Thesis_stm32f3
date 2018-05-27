@@ -22,18 +22,8 @@
 
 #define BAP_MAX_TICK_TO_WAIT_MESSAGE_D          (TickType_t)20
 
-#define BAP_STARTNEWTURN_STR_D                  "2StartNewTurn3"
-#define BAP_RECVOK_STR_D                        "2RecvOK3"
-#define BAP_RECVNG_STR_D                        "2RecvNG3"
-
-#define BAP_CMDMESS_STR_D                       "Cmnd"
-#define BAP_BPOS_STR_D                          "BPos"
-#define BAP_SETPOINT_STR_D                      "SPnt"
-#define BAP_CTRL_STR_D                          "Ctrl"
-
-
 #define BAP_UART_CMD_CH_D                       USART2
-#define BAP_UART_DEBUG_CH_D                     UART5
+#define BAP_UART_DEBUG_CH_D                     USART3
 
 #define BAP_PWM_TIMER_D                         TIM4
 #define BAP_PWM_XAXISTMOTOR_FORWARD_OUT_D       TIM_OC1
@@ -70,10 +60,26 @@ typedef enum
     BAP_MOTORDIR_BUTT
 }BAP_MOTOR_DIR_E;
 
+typedef enum
+{
+    BAP_PLATE_CONTROLLER_PID,
+    BAP_PLATE_CONTROLLER_SMC,
+    BAP_PLATE_CONTROLLER_BUTT
+}BAP_PLATE_CONTROLLER_E;
+
+typedef enum
+{
+    BAP_PLATE_MODE_CIRCLE,
+    BAP_PLATE_MODE_RECTANGLE,
+    BAP_PLATE_MODE_FREESET,
+    BAP_PLATE_MODE_BUTT
+}BAP_PLATE_MODE_E;
+
 typedef struct TaskSharedVars_RecvPos_S
 {
     int x;
     int y;
+    BAP_PLATE_CONTROLLER_E controller;
 }TaskSharedVars_RecvPos_S;
 
 typedef struct TaskSharedVars_MotorPos_S
@@ -82,16 +88,49 @@ typedef struct TaskSharedVars_MotorPos_S
     float y;
 }TaskSharedVars_MotorPos_S;
 
+typedef struct TaskSharedVars_TrjCircle_S
+{
+    unsigned int x;
+    unsigned int y;
+    unsigned int R;
+}TaskSharedVars_TrjCircle_S;
+
+typedef struct TaskSharedVars_TrjRectangle_S
+{
+    unsigned int topleft_x;
+    unsigned int topleft_y;
+    unsigned int botright_x;
+    unsigned int botright_y;
+}TaskSharedVars_TrjRectangle_S;
+
+typedef struct TaskSharedVars_TrjFreeSet_S
+{
+    unsigned int x;
+    unsigned int y;
+}TaskSharedVars_TrjFreeSet_S;
+
+typedef struct TaskSharedVars_Trajectory_S
+{
+    BAP_PLATE_MODE_E mode;
+    TaskSharedVars_TrjCircle_S circle;
+    TaskSharedVars_TrjRectangle_S rectangle;
+    TaskSharedVars_TrjFreeSet_S freeset;
+}TaskSharedVars_Trajectory_S;
+
 typedef struct TaskSharedVars_S
 {
     TaskSharedVars_RecvPos_S RecvPos;
     TaskSharedVars_MotorPos_S MotorPos;
+    TaskSharedVars_Trajectory_S Trajectory;
 }TaskSharedVars_S;
 
 //extern variables
 extern SemaphoreHandle_t CMDUART_Send_Se;
+extern SemaphoreHandle_t DEBUGUART_Send_Se;
 
 extern SemaphoreHandle_t CMDUART_Recv_Se;
+extern SemaphoreHandle_t DEBUGUART_Recv_Se;
 
 extern TaskSharedVars_S SharedVars;
+
 #endif

@@ -26,9 +26,10 @@ void BAP_SetupClock(void)
     rcc_periph_clock_enable(RCC_GPIOA); // for USART2
     rcc_periph_clock_enable(RCC_GPIOC); // for UART5, TIM8 Encoder input
     rcc_periph_clock_enable(RCC_GPIOD); // for UART5
+    rcc_periph_clock_enable(RCC_GPIOB); // for USART3
 
     rcc_periph_clock_enable(RCC_USART2);
-    rcc_periph_clock_enable(RCC_UART5);
+    rcc_periph_clock_enable(RCC_USART3);
     rcc_periph_clock_enable(RCC_DMA1);
     rcc_periph_clock_enable(RCC_TIM1);
     rcc_periph_clock_enable(RCC_TIM8);
@@ -47,6 +48,14 @@ void BAP_SetupGPIO(void)
     gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO2);
     gpio_set_af(GPIOC, GPIO_AF5, GPIO12);//PC12 = UART5_TX
     gpio_set_af(GPIOD, GPIO_AF5, GPIO2);//PD2 = UART5_RX
+
+    //GPIO for UART4
+    gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO10 | GPIO11);
+    gpio_set_af(GPIOC, GPIO_AF5, GPIO10 | GPIO11); //PC10 = UART4_TX    PC11 = UART4_RX
+
+    //GPIO for USART3
+    gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO10 | GPIO11);
+    gpio_set_af(GPIOB, GPIO_AF7, GPIO10 | GPIO11); //PB10 = USART3_TX    PB11 = USART3_RX
 
     //GPIO for PWM => use timer 4 | PD12 = TIM4_CH1 (in 1 -> red wire motor) | PD13 = TIM4_CH2 (in 2 -> black wire motor) 
     //                            | PD14 = TIM4_CH3 (in 3 -> red wire motor) | PD15 = TIM4_CH4 (in 4 -> black wire motor)
@@ -184,7 +193,6 @@ BAP_RESULT_E BAP_SetupUSARTWithDMA(uint32_t uart, int baudrate,bool withDMA)
         }
         nvic_set_priority(DMARxCH, 0xE0);
         nvic_enable_irq(DMARxCH);
-
         nvic_set_priority(DMATxCH, 0xD0);
         nvic_enable_irq(DMATxCH);
     }
@@ -195,13 +203,16 @@ BAP_RESULT_E BAP_SetupUSARTWithDMA(uint32_t uart, int baudrate,bool withDMA)
 void BAP_SetupModuleInit(void)
 {
     BAP_SemCreateBin(CMDUART_Send_Se);
+    BAP_SemCreateBin(DEBUGUART_Send_Se);
     BAP_SemCreateBin(CMDUART_Recv_Se);
+    BAP_SemCreateBin(DEBUGUART_Recv_Se);
 
     BAP_SetupClock();
     BAP_SetupGPIO();
 
     BAP_SetupUSARTWithDMA(BAP_UART_CMD_CH_D, BAP_UART_BAUDRATE_D, 1);
-    BAP_SetupUSARTWithDMA(BAP_UART_DEBUG_CH_D, BAP_UART_BAUDRATE_D, 0);
+    // BAP_SetupUSARTWithDMA(BAP_UART_DEBUG_CH_D, BAP_UART_BAUDRATE_D, 0);
+    BAP_SetupUSARTWithDMA(BAP_UART_DEBUG_CH_D, BAP_UART_BAUDRATE_D, 1);
 
     //config Timer1 PWM to run at 1kHz, resolution 1000 (0 to 999)
     BAP_SetupPWM(BAP_PWM_TIMER_D, BAP_SYSTEM_CLOCK_HZ_D/1000000, 1000); 

@@ -60,7 +60,7 @@ BAP_RESULT_E BAP_SMCSecondOrderLFGetOutput(BAP_SecondOrderLF_S* lf, float* out)
     return BAP_SUCCESS;
 }
 
-BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, float sat_lower, float k1, float K, float yd)
+BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, float sat_lower, float k1, float K, float yd, float scale)
 {
     if(smc == NULL)
     {
@@ -86,6 +86,9 @@ BAP_RESULT_E BAP_SMCInit(BAP_SMC_S* smc, int order, float dT, float sat_upper, f
     smc->k1 = k1;
     smc->K = K;
     smc->yd_in = yd;
+    smc->scale = scale;
+
+    smc->with_limit = 0;
 
     return BAP_SUCCESS;
 }
@@ -113,6 +116,8 @@ BAP_RESULT_E BAP_SMCOuputCal(BAP_SMC_S* smc, float* out)
     float yd_dot_dot = 0;
     float sigma = 0;
     float sign_sat_value = 0;
+    float result = 0;
+    float output = 0;
 
     if(smc == NULL || out == NULL)
     {
@@ -124,7 +129,12 @@ BAP_RESULT_E BAP_SMCOuputCal(BAP_SMC_S* smc, float* out)
     BAP_SMCSliddingSurfaceCal(smc, &sigma);
     BAP_FuncGetSatOutput(&(smc->sat), sigma, &sign_sat_value);
 
-    *out = BAP_SMC_FORMULA_CONST_D*(yd_dot_dot + smc->k1*e_dot + smc->K*sign_sat_value);
+    result = BAP_SMC_FORMULA_CONST_D*(yd_dot_dot + smc->k1*e_dot + smc->K*sign_sat_value)*smc->scale;
+    if(smc->with_limit == 1)
+    {
+        BAP_FuncGetSatOutput(&(smc->output_limit), result, &output);
+    }
+    *out = output;
     return BAP_SUCCESS;
 }
 
@@ -148,5 +158,46 @@ BAP_RESULT_E BAP_SMCUpdateParam(BAP_SMC_S* smc, float y)
 
     BAP_FuncSampleAppend(&(smc->yd), smc->yd_in);
     BAP_FuncSampleAppend(&(smc->e), smc->yd_in - y);
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SMCOutputLimitEnable(BAP_SMC_S* smc, float lower, float upper)
+{
+    if(smc == NULL)
+    {
+        return BAP_FAILED_NULL_PTR;
+    }
+
+    if (lower > upper)
+    {
+        return BAP_FAILED_WRONG_PAR;
+    }
+    
+    smc->with_limit = 1;
+    smc->output_limit.upper_limit = upper;
+    smc->output_limit.lower_limit = lower;
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SMCOutputLimitDisable(BAP_SMC_S* smc)
+{
+    if(smc == NULL)
+    {
+        return BAP_FAILED_NULL_PTR;
+    }
+
+    smc->with_limit = 0;
+    return BAP_SUCCESS;
+}
+
+BAP_RESULT_E BAP_SMCUpdate(BAP_SMC_S* smc, float k1, float K)
+{
+    if(smc == NULL)
+    {
+        return BAP_FAILED_NULL_PTR;
+    }
+
+    smc->k1 = k1;
+    smc->K = K;
     return BAP_SUCCESS;
 }
