@@ -117,11 +117,26 @@ typedef struct TaskSharedVars_Trajectory_S
     TaskSharedVars_TrjFreeSet_S freeset;
 }TaskSharedVars_Trajectory_S;
 
+typedef struct TaskSharedVars_Streaming_S
+{
+    unsigned int x_realpos;
+    unsigned int x_setpoint;
+    unsigned int y_realpos;
+    unsigned int y_setpoint;
+    float x_axist_motor_deg;
+    float x_axist_motor_deg;
+    float y_axist_motor_setpoint;
+    float y_axist_motor_setpoint;
+    BAP_PLATE_CONTROLLER_E controller;
+    BAP_PLATE_MODE_E mode;
+}TaskSharedVars_Streaming_S;
+
 typedef struct TaskSharedVars_S
 {
     TaskSharedVars_RecvPos_S RecvPos;
     TaskSharedVars_MotorPos_S MotorPos;
     TaskSharedVars_Trajectory_S Trajectory;
+    TaskSharedVars_Streaming_S Streaming;
 }TaskSharedVars_S;
 
 //extern variables
