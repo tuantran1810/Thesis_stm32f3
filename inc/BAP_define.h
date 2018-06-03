@@ -123,9 +123,9 @@ typedef struct TaskSharedVars_Streaming_S
     unsigned int x_setpoint;
     unsigned int y_realpos;
     unsigned int y_setpoint;
-    float x_axist_motor_deg;
-    float x_axist_motor_deg;
-    float y_axist_motor_setpoint;
+    float x_axist_motor_realpos;
+    float x_axist_motor_setpoint;
+    float y_axist_motor_realpos;
     float y_axist_motor_setpoint;
     BAP_PLATE_CONTROLLER_E controller;
     BAP_PLATE_MODE_E mode;

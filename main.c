@@ -43,11 +43,12 @@ int main(void)
 
     memset(&SharedVars, 0, sizeof(TaskSharedVars_S));
 
-    xTaskCreate(BAP_TaskRecvCmd, "BAP_TaskRecvCmd", 300, (void*)&SharedVars, 3, NULL);
-    xTaskCreate(BAP_TaskPlateControl, "BAP_TaskPlateControl", 500, (void*)&SharedVars, 3, NULL);
-    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", 300, (void*)&SharedVars, 2, NULL);
-    xTaskCreate(BAP_TaskCommunicate, "BAP_TaskCommunicate", 300, (void*)&SharedVars, 1, NULL);
-    xTaskCreate(BAP_TaskTrajectoryControl, "BAP_TaskTrajectoryControl", 300, (void*)&SharedVars, 1, NULL);
+    xTaskCreate(BAP_TaskRecvCmd, "BAP_TaskRecvCmd", 300, (void*)&SharedVars, 4, NULL);
+    xTaskCreate(BAP_TaskPlateControl, "BAP_TaskPlateControl", 300, (void*)&SharedVars, 4, NULL);
+    xTaskCreate(BAP_TaskMotorControl, "BAP_TaskMotorControl", 300, (void*)&SharedVars, 3, NULL);
+    xTaskCreate(BAP_TaskCommunicate, "BAP_TaskCommunicate", 300, (void*)&SharedVars, 2, NULL);
+    xTaskCreate(BAP_TaskTrajectoryControl, "BAP_TaskTrajectoryControl", 500, (void*)&SharedVars, 2, NULL);
+    xTaskCreate(BAP_TaskStreaming, "BAP_TaskStreaming", 500, (void*)&SharedVars, 1, NULL);
     vTaskStartScheduler();
 
     while(1);

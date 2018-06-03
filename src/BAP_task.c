@@ -125,7 +125,7 @@ void BAP_TaskRecvCmd(void* p)
                     pSharedVars->RecvPos.x = x;
                     pSharedVars->RecvPos.y = y;
                     pSharedVars->Streaming.x_realpos = x;
-                    pSharedVars->Streaming.y_realpos = y;                    
+                    pSharedVars->Streaming.y_realpos = y;
                     BAP_SemGive(InterSharedVars_Se);
                     BAP_SemGive(InterSharedVar_RecvPos_Se);
                 }
@@ -156,6 +156,7 @@ void BAP_TaskPlateControl(void* p)
             x = pSharedVars->RecvPos.x;
             y = pSharedVars->RecvPos.y;
             controller = pSharedVars->RecvPos.controller;
+            pSharedVars->Streaming.controller = pSharedVars->RecvPos.controller;
             BAP_SemGive(InterSharedVars_Se);
 
             BAP_SemTakeMax(InterController_Se);
@@ -193,12 +194,16 @@ void BAP_TaskMotorControl(void* p)
     float y = 0;
     float x_out = 0;
     float y_out = 0;
-    float tmpx = 0, tmpy = 0;
+    float x_motor_pos = 0, y_motor_pos = 0;
     while(1)
     {
         BAP_SemTakeMax(InterSharedVars_Se);
         x = pSharedVars->MotorPos.x;
         y = pSharedVars->MotorPos.y;
+        pSharedVars->Streaming.x_axist_motor_realpos = x_motor_pos;
+        pSharedVars->Streaming.y_axist_motor_realpos = y_motor_pos;
+        pSharedVars->Streaming.x_axist_motor_setpoint = x;
+        pSharedVars->Streaming.y_axist_motor_setpoint = y;
         BAP_SemGive(InterSharedVars_Se);
 
         BAP_MotorChangePosSetpoint(&BAP_xAxistMotor, x);
@@ -210,8 +215,8 @@ void BAP_TaskMotorControl(void* p)
         BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)x_out);
         BAP_MotorChangeSpeedPWM(&BAP_yAxistMotor, (int)y_out);
 
-        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &tmpx);
-        BAP_MotorGetPosDegree(&BAP_yAxistMotor, &tmpy);
+        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &x_motor_pos);
+        BAP_MotorGetPosDegree(&BAP_yAxistMotor, &y_motor_pos);
         vTaskDelay(4);
     }
 }
@@ -383,7 +388,7 @@ void BAP_TaskTrajectoryControl(void* p)
     BAP_PLATE_MODE_E pre_mode = BAP_PLATE_MODE_FREESET;
     unsigned int count = 0;
     unsigned int max_count = 0;
-    unsigned int circle_x = 0, circle_y = 0;
+    unsigned int sp_x = 0, sp_y = 0;
 
     BAP_TaskUpdateSetPoints(160, 160);
 
@@ -397,6 +402,9 @@ void BAP_TaskTrajectoryControl(void* p)
     {
         BAP_SemTakeMax(InterSharedVars_Se);
         memcpy(&traj, &(pSharedVars->Trajectory), sizeof(TaskSharedVars_Trajectory_S));
+        pSharedVars->Streaming.x_setpoint = sp_x;
+        pSharedVars->Streaming.y_setpoint = sp_y;
+        pSharedVars->Streaming.mode = traj.mode;
         BAP_SemGive(InterSharedVars_Se);
 
         if(traj.mode == BAP_PLATE_MODE_CIRCLE)
@@ -407,10 +415,8 @@ void BAP_TaskTrajectoryControl(void* p)
                 pre_mode = BAP_PLATE_MODE_CIRCLE;
             }
 
-            circle_y = (float)traj.circle.y + (float)traj.circle.R*sin(BAP_TaskDeg2Rad(count/2));
-            circle_x = (float)traj.circle.x + (float)traj.circle.R*cos(BAP_TaskDeg2Rad(count/2));
-
-            BAP_TaskUpdateSetPoints(circle_x, circle_y);
+            sp_x = (unsigned int)((float)traj.circle.x + (float)traj.circle.R*cos(BAP_TaskDeg2Rad(count/2)));
+            sp_y = (unsigned int)((float)traj.circle.y + (float)traj.circle.R*sin(BAP_TaskDeg2Rad(count/2)));
 
             count++;
             if(count == 500)
@@ -429,22 +435,23 @@ void BAP_TaskTrajectoryControl(void* p)
 
             if(count < max_count/4)
             {
-                BAP_TaskUpdateSetPoints(traj.rectangle.topleft_x, traj.rectangle.topleft_y);
+                sp_x = traj.rectangle.topleft_x;
+                sp_y = traj.rectangle.topleft_y;
             }
-
-            if(count >= max_count/4 && count < 2*max_count/4)
+            else if(count < 2*max_count/4)
             {
-                BAP_TaskUpdateSetPoints(traj.rectangle.botright_x, traj.rectangle.topleft_y);
+                sp_x = traj.rectangle.botright_x;
+                sp_y = traj.rectangle.topleft_y;
             }
-
-            if(count >= 2*max_count/4 && count < 3*max_count/4)
+            else if(count < 3*max_count/4)
             {
-                BAP_TaskUpdateSetPoints(traj.rectangle.botright_x, traj.rectangle.botright_y);
+                sp_x = traj.rectangle.botright_x;
+                sp_y = traj.rectangle.botright_y;
             }
-
-            if(count >= 3*max_count/4)
+            else
             {
-                BAP_TaskUpdateSetPoints(traj.rectangle.topleft_x, traj.rectangle.botright_y);
+                sp_x = traj.rectangle.topleft_x;
+                sp_y = traj.rectangle.botright_y;
             }
 
             count++;
@@ -455,9 +462,12 @@ void BAP_TaskTrajectoryControl(void* p)
         }
         else if(traj.mode == BAP_PLATE_MODE_FREESET)
         {
-            BAP_TaskUpdateSetPoints(traj.freeset.x, traj.freeset.y);
+            sp_x = traj.freeset.x;
+            sp_y = traj.freeset.y;
             pre_mode = BAP_PLATE_MODE_FREESET;
         }
+
+        BAP_TaskUpdateSetPoints(sp_x, sp_y);
         vTaskDelay(4);
     }
 }
@@ -465,6 +475,53 @@ void BAP_TaskTrajectoryControl(void* p)
 void BAP_TaskStreaming(void* p)
 {
     TaskSharedVars_S* pSharedVars = (TaskSharedVars_S*)p;
+    TaskSharedVars_Streaming_S streaming;
+    char data[70] = {0};
+    char* ctrl_str = NULL;
+    char* mode_str = NULL;
+    while(1)
+    {
+        memset(data, ' ', 70);
+
+        BAP_SemTakeMax(InterSharedVars_Se);
+        memcpy(&streaming, &(pSharedVars->Streaming), sizeof(TaskSharedVars_Streaming_S));
+        BAP_SemGive(InterSharedVars_Se);
+
+        if(streaming.controller == BAP_PLATE_CONTROLLER_PID)
+        {
+            ctrl_str = BAP_PID_STR_D;
+        }
+        else
+        {
+            ctrl_str = BAP_SMC_STR_D;
+        }
+
+        if(streaming.mode == BAP_PLATE_MODE_CIRCLE)
+        {
+            mode_str = BAP_CIR_STR_D;
+        }
+        else if (streaming.mode == BAP_PLATE_MODE_RECTANGLE)
+        {
+            mode_str = BAP_REC_STR_D;
+        }
+        else
+        {
+            mode_str = BAP_FSE_STR_D;
+        }
+
+        sprintf(data, "[%s][ %03u %03u %03u %03u %5.2f %5.2f %5.2f %5.2f %s %s ]",
+            BAP_STRM_STR_D, 
+            streaming.x_realpos, streaming.y_realpos, 
+            streaming.x_setpoint, streaming.y_setpoint,
+            streaming.x_axist_motor_realpos, streaming.y_axist_motor_realpos, 
+            streaming.x_axist_motor_setpoint, streaming.y_axist_motor_setpoint,
+            ctrl_str, mode_str);
+
+
+        BAP_UARTSendDMA(BAP_UART_DEBUG_CH_D, data, 70);
+        BAP_SemTakeMax(DEBUGUART_Send_Se);
+        vTaskDelay(20);
+    }
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // Ultility functions

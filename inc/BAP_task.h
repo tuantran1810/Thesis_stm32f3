@@ -2,9 +2,14 @@
 #define BAP_TASK_H
 #include "BAP_define.h"
 
+#define BAP_STX_STR_D                           2
+#define BAP_ETX_STR_D                           3
+
 #define BAP_BPOS_STR_D                          "BPos"
 #define BAP_CTRL_STR_D                          "Ctrl"
 #define BAP_MODE_STR_D                          "Mode"
+#define BAP_STRM_STR_D							"Strm"
+
 #define BAP_PID_STR_D                           "PID"
 #define BAP_SMC_STR_D                           "SMC"
 #define BAP_CIR_STR_D                           "Cir"
@@ -17,5 +22,6 @@ void BAP_TaskPlateControl(void* p);
 void BAP_TaskMotorControl(void* p);
 void BAP_TaskCommunicate(void* p);
 void BAP_TaskTrajectoryControl(void* p);
+void BAP_TaskStreaming(void* p);
 
 #endif
