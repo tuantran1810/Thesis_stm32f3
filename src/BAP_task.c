@@ -197,6 +197,9 @@ void BAP_TaskMotorControl(void* p)
     float x_motor_pos = 0, y_motor_pos = 0;
     while(1)
     {
+        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &x_motor_pos);
+        BAP_MotorGetPosDegree(&BAP_yAxistMotor, &y_motor_pos);
+        
         BAP_SemTakeMax(InterSharedVars_Se);
         x = pSharedVars->MotorPos.x;
         y = pSharedVars->MotorPos.y;
@@ -215,8 +218,6 @@ void BAP_TaskMotorControl(void* p)
         BAP_MotorChangeSpeedPWM(&BAP_xAxistMotor, (int)x_out);
         BAP_MotorChangeSpeedPWM(&BAP_yAxistMotor, (int)y_out);
 
-        BAP_MotorGetPosDegree(&BAP_xAxistMotor, &x_motor_pos);
-        BAP_MotorGetPosDegree(&BAP_yAxistMotor, &y_motor_pos);
         vTaskDelay(4);
     }
 }
