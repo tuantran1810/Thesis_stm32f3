@@ -419,7 +419,7 @@ void BAP_TaskTrajectoryControl(void* p)
             sp_y = (unsigned int)((float)traj.circle.y + (float)traj.circle.R*sin(BAP_TaskDeg2Rad(count/2)));
 
             count++;
-            if(count == 500)
+            if(count == 720)
             {
                 count = 0;
             }
